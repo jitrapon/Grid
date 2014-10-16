@@ -92,10 +92,12 @@ public class GameScreen implements Screen {
 
 			@Override
 			public void onRight() {
+				swipeDir = Swipe.RIGHT;
 			}
 
 			@Override
 			public void onLeft() {
+				swipeDir = Swipe.LEFT;
 			}
 
 			@Override
@@ -165,7 +167,7 @@ public class GameScreen implements Screen {
 			drawGrid(grid);
 			swipeDir = null;
 			
-			System.out.println(grid.getGrid());
+//			System.out.println(grid.getGrid());
 		}
 			
 		// update
