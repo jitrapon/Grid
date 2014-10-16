@@ -122,7 +122,7 @@ public class Grid {
 	 * @param color
 	 * @return
 	 */
-	private GridBox spawnGridBoxAt(int id, Color color) {
+	public GridBox spawnGridBoxAt(int id, Color color) {
 		if (id < 1 || id > grid.size()) return null;
 
 		GridBox box = grid.get(id-1);

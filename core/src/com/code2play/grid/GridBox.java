@@ -41,6 +41,10 @@ public class GridBox {
 		prevId = -1;
 	}
 	
+	public void setId(int id) {
+		this.id = id;
+	}
+	
 	/**
 	 * Checks whether or not the gridbox is empty (no color assigned)
 	 * @return True iff empty, false otherwise

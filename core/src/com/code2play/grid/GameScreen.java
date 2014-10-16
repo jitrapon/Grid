@@ -139,6 +139,7 @@ public class GameScreen implements Screen {
 		}
 	}
 
+	boolean firstMove = true;
 	@Override
 	/**
 	 * Calls upon World instance to update its entities, then 
@@ -148,15 +149,20 @@ public class GameScreen implements Screen {
 		// clear screen
 		Gdx.gl.glClearColor(0, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+		
+		// render grid for the first time
+		if (firstMove) {
+			drawGrid(grid);
+			firstMove = false;
+		}
 
 		// check input
-
 		if (swipeDir != null) {
 			// update gridbox
 			grid.update(delta, swipeDir);
 	
 			// process moves to be rendered
-			processMoves(grid);
+			drawGrid(grid);
 			swipeDir = null;
 			
 			System.out.println(grid.getGrid());
@@ -169,7 +175,11 @@ public class GameScreen implements Screen {
 		stage.draw();
 	}
 
-	private void processMoves(Grid grid) {
+	/**
+	 * Renders all the stuff that needs to be drawn from the grid
+	 * @param grid
+	 */
+	private void drawGrid(Grid grid) {
 		for (GridBox gridBox : grid.getGrid()) {
 			if (!gridBox.isEmpty()) {
 
@@ -185,8 +195,9 @@ public class GameScreen implements Screen {
 							scaleTo(boxWidth, boxHeight, 0.15f, Interpolation.linear),
 							moveTo(pos.x, pos.y, 0.15f, Interpolation.linear)
 							));
-					System.out.println("Added Color " + gridBox.getColor());
-					gridBoxImg.setUserObject(gridBox.getId());
+					gridBox.setPrevId(-2); 										// not -1 again to avoid replaying spawning animation
+//					System.out.println("Added Color " + gridBox.getColor());
+					gridBoxImg.setUserObject( new GridBox(gridBox.getId(), gridBox.getColor()) );
 					gridGroup.addActor(gridBoxImg);
 				}
 
@@ -196,16 +207,20 @@ public class GameScreen implements Screen {
 					// update it to move.destId
 					// add move transition animation
 					for (Actor gridBoxImg : gridGroup.getChildren()) {
-						if (gridBoxImg.getUserObject() != null) {
-							if ( ((Integer)gridBoxImg.getUserObject()) == 
-									gridBox.getPrevId() ) {
+						GridBox temp = (GridBox) gridBoxImg.getUserObject();
+						if (temp != null) {
+							if ( temp.getId() == gridBox.getPrevId()  
+									&& temp.getColor() == gridBox.getColor() ) {
 								Vector2 pos = gridCoordinates.get(gridBox.getId()-1);
 								gridBoxImg.addAction(
 										moveTo(pos.x, pos.y, 0.15f, Interpolation.linear)
 										);
-								System.out.println("Move from " + (gridBox.getPrevId()-1) + " to " + (gridBox.getId()-1));
-								gridBox.setPrevId(-1);
-								gridBoxImg.setUserObject(gridBox.getId());
+//								System.out.println("Move from " + (gridBox.getPrevId()-1) + " to " + (gridBox.getId()-1));
+								gridBox.setPrevId(-2);							// not -1 again to avoid replaying spawning animation
+								
+								// update reference object
+								temp.setId(gridBox.getId());
+								gridBoxImg.setUserObject(temp);
 							}
 						}
 					}

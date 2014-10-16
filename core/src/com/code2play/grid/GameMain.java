@@ -6,13 +6,14 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.code2play.grid.GridBox.Color;
 
 public class GameMain extends Game {
 	
 	GameScreen gameScreen; 
 	private Grid grid;
-	private static final int DEFAULT_GRID_WIDTH = 3;
-	private static final int DEFAULT_GRID_HEIGHT = 3;
+	private static final int DEFAULT_GRID_WIDTH = 5;
+	private static final int DEFAULT_GRID_HEIGHT = 5;
 	
 	@Override
 	public void create () {
@@ -22,6 +23,8 @@ public class GameMain extends Game {
 		
 		// initialize grid
 		grid = new Grid(DEFAULT_GRID_WIDTH, DEFAULT_GRID_HEIGHT);
+//		grid.spawnGridBoxAt(2, Color.BLUE);
+		grid.spawnGridBoxAt(5, Color.RED);
 		
 		// set screen
 		gameScreen = new GameScreen(this);
