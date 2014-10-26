@@ -19,7 +19,13 @@ public class GridBox {
 	private Color color;
 	
 	/* previous id of this grid box */
+	/* Previous Id is used to identify which gridBox this is moved from */
 	private int prevId;
+	
+	/* group of neighboring same-color gridboxes */
+	private Group group;
+	
+	/* whether or not this 
 	
 	/**
 	 * Constructs an initially empty gridbox with a specified id
@@ -28,6 +34,7 @@ public class GridBox {
 		this.id = id;
 		color = Color.NONE;
 		prevId = -1;
+		group = null;
 	}
 	
 	/**
@@ -41,6 +48,18 @@ public class GridBox {
 		prevId = -1;
 	}
 	
+	public void setGroup(Group group) {
+		this.group = group;
+	}
+	
+	public Group getGroup() {
+		return group;
+	}
+	
+	/**
+	 * Sets gridbox Id
+	 * @param id
+	 */
 	public void setId(int id) {
 		this.id = id;
 	}
@@ -81,8 +100,9 @@ public class GridBox {
 	 * Clears the color, if there is one assigned
 	 */
 	public void clearColor() {
-		this.color = Color.NONE;
+		color = Color.NONE;
 		prevId = -1;
+		group = null;
 	}
 	
 	public Color getColor() {
@@ -93,7 +113,7 @@ public class GridBox {
 	public String toString() {
 		String color = "";
 		String id = "";
-		String prevId = this.prevId + "";
+		String prevId = this.prevId-1 + "";
 		if (this.id > 9) id = this.id-1 + "";
 		else id = this.id-1 + " ";
 		

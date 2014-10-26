@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import com.badlogic.gdx.utils.Array;
 import com.code2play.grid.GameScreen.Swipe;
 import com.code2play.grid.GridBox.Color;
 
@@ -24,6 +25,9 @@ public class Grid {
 
 	private Random random;
 	private int numBoxSpawned;
+	
+	private Array<Group> colorGroups;
+	private static final int MIN_CHAIN_SIZE = 3;
 
 	/**
 	 * Constructs an initially empty grid of dimension specified 
@@ -46,6 +50,7 @@ public class Grid {
 			GridBox box = new GridBox(currId);
 			grid.add(box);
 		}
+		colorGroups = new Array<Group>();
 	}
 
 	public int getWidth() {
@@ -65,6 +70,7 @@ public class Grid {
 	}
 
 	boolean firstMove = true;
+//	boolean done = false;
 	/**
 	 * Updates all instances of gridboxes and logic in the grid
 	 * @param deltaTime
@@ -72,11 +78,18 @@ public class Grid {
 	public void update(float deltaTime, Swipe direction) {
 		// clear from last rendered frame
 		if (!firstMove) move(direction);
+		firstMove = false;
 
 		// spawn new gridbox
 		spawnRandomGridBox();
+//		if (!done) {
+//			spawnGridBoxAt(4, Color.RED);
+//			done = true;
+//		}
 
-		firstMove = false;
+		// update all group of color matches
+		updateColorMatchCounts();
+		System.out.println(colorGroups);
 	}
 
 	/**
@@ -178,7 +191,9 @@ public class Grid {
 					if (index == i) break;
 					else {
 						destination = grid.get(index);
-						if (destination.isEmpty()) {
+						if (destination.isEmpty() 
+//								|| destination.getGroup().size >= MIN_CHAIN_SIZE
+								) {
 							destination.setPrevId( toMove.getId() );
 							destination.setColor( toMove.getColor() );
 							toMove.clearColor();
@@ -211,7 +226,9 @@ public class Grid {
 					if (index == i) break;
 					else {
 						destination = grid.get(index);
-						if (destination.isEmpty()) {
+						if (destination.isEmpty()
+//								|| destination.getGroup().size >= MIN_CHAIN_SIZE
+								) {
 							destination.setPrevId( toMove.getId() );
 							destination.setColor( toMove.getColor() );
 							toMove.clearColor();
@@ -242,7 +259,9 @@ public class Grid {
 					if (index < i) break;
 					else {
 						destination = grid.get(index);
-						if (destination.isEmpty()) {
+						if (destination.isEmpty()
+//								|| destination.getGroup().size >= MIN_CHAIN_SIZE
+								) {
 							destination.setPrevId( toMove.getId() );
 							destination.setColor( toMove.getColor() );
 							toMove.clearColor();
@@ -273,7 +292,9 @@ public class Grid {
 					if (index > i) break;
 					else {
 						destination = grid.get(index);
-						if (destination.isEmpty()) {
+						if (destination.isEmpty() 
+//								|| destination.getGroup().size >= MIN_CHAIN_SIZE
+								) {
 							destination.setPrevId( toMove.getId() );
 							destination.setColor( toMove.getColor() );
 							toMove.clearColor();
@@ -282,6 +303,107 @@ public class Grid {
 				}
 			}
 		}
+	}
+	
+	/**
+	 * TODO
+	 * Checks and updates all neighboring gridboxes if there are color matches
+	 * This is called after all gridboxes are moved.
+	 */
+	private Array<Group> updateColorMatchCounts() {
+		colorGroups.clear();
+		Array<GridBox> neighbors = new Array<GridBox>();
+		
+		// clear all thr groups made from previous update
+		for (GridBox g : grid) {
+			g.setGroup(null);
+		} 
+		
+		// iterate through all gridboxes to find non-diagonal match-colored neighbors 
+		// and update their groups
+		for (int i = 0; i < grid.size(); i++) {
+			GridBox g = grid.get(i);
+			if (!g.isEmpty()) {
+				neighbors.clear();
+				neighbors = getNeighBors(g);
+				
+				for (GridBox n : neighbors) {
+					
+					// is n the same color ?
+					if (n.getColor() == g.getColor()) {
+						
+						// is n already added into a group ?
+						if (n.getGroup() == null) {
+							
+							// if g has a group
+							if (g.getGroup() != null) {
+								g.getGroup().add(n);
+								n.setGroup(g.getGroup());
+//								if (colorGroups.contains(g.getGroup(), false)) colorGroups.add(g.getGroup());
+							}
+							else {
+								Group group = new Group(g.getColor());
+								group.add(g);
+								group.add(n);
+								g.setGroup(group);
+								n.setGroup(group);
+								colorGroups.add(group);
+							}
+						}
+						
+						// this means that we need to join the groups together as one
+						// if n's group does not contain this gridbox
+						else if (n.getGroup() != null 
+								&& !n.getGroup().contains(g, true)) {
+							if (g.getGroup() != null) {
+								g.getGroup().addAll(n.getGroup());
+								colorGroups.removeValue(n.getGroup(), true);
+								for (Object gridBox : n.getGroup()) 
+									((GridBox)gridBox).setGroup(g.getGroup());
+							}
+							else {
+								n.getGroup().add(g);
+								g.setGroup(n.getGroup());
+							}
+						}
+					}
+				}
+			}
+		}
+		return colorGroups;
+	}
+	
+	/**
+	 * Returns non-diagonal neighboring gridboxes
+	 * @param g
+	 * @return
+	 */
+	private Array<GridBox> getNeighBors(GridBox g) {
+		Array<GridBox> neighbors = new Array<GridBox>();
+		int index = g.getId()-1;
+		
+		// check boundary conditions
+		// add left neighbor
+		// except left columns
+		if (index % width != 0) 
+			neighbors.add(grid.get( index-1 ));
+		
+		// add top neighbor
+		// except top row
+		if (index >= width)
+			neighbors.add(grid.get( index-width ));
+		
+		// add right neighbor
+		// except right column
+		if (index % width != (width-1))
+			neighbors.add(grid.get( index+1 ));
+		
+		// add bottom neighbor
+		// except bottom row
+		if (index < (height-1)*width)
+			neighbors.add(grid.get( index+width ));
+		
+		return neighbors;
 	}
 
 	public void debugDraw() {

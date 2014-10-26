@@ -23,8 +23,7 @@ public class GameMain extends Game {
 		
 		// initialize grid
 		grid = new Grid(DEFAULT_GRID_WIDTH, DEFAULT_GRID_HEIGHT);
-//		grid.spawnGridBoxAt(2, Color.BLUE);
-//		grid.spawnGridBoxAt(5, Color.RED);
+//		grid.spawnGridBoxAt(7, Color.RED);
 		
 		// set screen
 		gameScreen = new GameScreen(this);
