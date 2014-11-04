@@ -1,6 +1,11 @@
 package com.code2play.grid;
 
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.moveTo;
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.parallel;
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.scaleTo;
+
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import com.badlogic.gdx.Gdx;
@@ -16,11 +21,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
-
-import static com.badlogic.gdx.scenes.scene2d.actions.Actions.moveTo;
-import static com.badlogic.gdx.scenes.scene2d.actions.Actions.parallel;
-import static com.badlogic.gdx.scenes.scene2d.actions.Actions.scaleTo;
-import static com.badlogic.gdx.scenes.scene2d.actions.Actions.sequence;
+import com.code2play.grid.GridBox.Color;
 
 public class GameScreen implements Screen {
 
@@ -30,6 +31,7 @@ public class GameScreen implements Screen {
 	public static final int height = 1280;
 	public static final int maxWidth = 1080;
 	public static final int maxHeight = 1920 ;
+	private static final int REMOVED = -3;
 	
 	private float boxWidth;
 	private float boxHeight;
@@ -167,7 +169,7 @@ public class GameScreen implements Screen {
 			drawGrid(grid);
 			swipeDir = null;
 			
-//			System.out.println(grid.getGrid());
+			System.out.println(grid.getGrid());
 		}
 			
 		// update
@@ -182,6 +184,7 @@ public class GameScreen implements Screen {
 	 * @param grid
 	 */
 	private void drawGrid(Grid grid) {
+		Iterator<Actor> iter = null;
 		for (GridBox gridBox : grid.getGrid()) {
 			if (!gridBox.isEmpty()) {
 
@@ -208,7 +211,10 @@ public class GameScreen implements Screen {
 					// get stage actor under gridGroup of userobjecttype with id = move.originId and 
 					// update it to move.destId
 					// add move transition animation
-					for (Actor gridBoxImg : gridGroup.getChildren()) {
+					// cannot call removeActor while iterating
+					iter = gridGroup.getChildren().iterator();
+					while (iter.hasNext()) {
+						Actor gridBoxImg = iter.next();
 						GridBox temp = (GridBox) gridBoxImg.getUserObject();
 						if (temp != null) {
 							if ( temp.getId() == gridBox.getPrevId()  
@@ -221,13 +227,35 @@ public class GameScreen implements Screen {
 								gridBox.setPrevId(-2);							// not -1 again to avoid replaying spawning animation
 								
 								// update reference object
+								temp.setPrevId(gridBox.getPrevId());
 								temp.setId(gridBox.getId());
 								gridBoxImg.setUserObject(temp);
+							}
+							
+							// eliminates old gridbox color in group
+							else if ( temp.getId() == gridBox.getId()
+									&& temp.getColor() != gridBox.getColor() ) {
+								//TODO eliminate it
+								temp.setPrevId(REMOVED);							// mark as removed 
+								if (gridBox.getColor() == Color.REMOVED) {
+									gridBox.setColor(Color.NONE);
+									gridBox.setPrevId(-1);
+								}
 							}
 						}
 					}
 				}
 			}
+		}
+		
+		// remove all grids marked as removed
+		iter = gridGroup.getChildren().iterator();
+		while (iter.hasNext()) {
+			Actor gridBoxImg = iter.next();
+			GridBox temp = (GridBox) gridBoxImg.getUserObject();
+			if (temp != null) 
+				if (temp.getPrevId() == REMOVED) 
+					iter.remove();
 		}
 	}
 

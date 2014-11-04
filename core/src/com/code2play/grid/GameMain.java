@@ -12,8 +12,8 @@ public class GameMain extends Game {
 	
 	GameScreen gameScreen; 
 	private Grid grid;
-	private static final int DEFAULT_GRID_WIDTH = 5;
-	private static final int DEFAULT_GRID_HEIGHT = 5;
+	private static final int DEFAULT_GRID_WIDTH = 4;
+	private static final int DEFAULT_GRID_HEIGHT = 4;
 	
 	@Override
 	public void create () {
@@ -23,7 +23,7 @@ public class GameMain extends Game {
 		
 		// initialize grid
 		grid = new Grid(DEFAULT_GRID_WIDTH, DEFAULT_GRID_HEIGHT);
-//		grid.spawnGridBoxAt(7, Color.RED);
+//		grid.spawnGridBoxAt(1, Color.RED);
 		
 		// set screen
 		gameScreen = new GameScreen(this);

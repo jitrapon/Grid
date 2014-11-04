@@ -25,7 +25,7 @@ public class Grid {
 
 	private Random random;
 	private int numBoxSpawned;
-	
+
 	private Array<Group> colorGroups;
 	private static final int MIN_CHAIN_SIZE = 3;
 
@@ -70,7 +70,7 @@ public class Grid {
 	}
 
 	boolean firstMove = true;
-//	boolean done = false;
+	boolean done = false;
 	/**
 	 * Updates all instances of gridboxes and logic in the grid
 	 * @param deltaTime
@@ -82,14 +82,13 @@ public class Grid {
 
 		// spawn new gridbox
 		spawnRandomGridBox();
-//		if (!done) {
-//			spawnGridBoxAt(4, Color.RED);
-//			done = true;
-//		}
+		//		if (!done) {
+		//			spawnGridBoxAt(3, Color.RED);
+		//			done = true;
+		//		}
 
 		// update all group of color matches
 		updateColorMatchCounts();
-		System.out.println(colorGroups);
 	}
 
 	/**
@@ -126,7 +125,7 @@ public class Grid {
 
 	public GridBox.Color getRandomColor() {
 		GridBox.Color[] colors = GridBox.Color.values();
-		return colors[getRandomInt(1, colors.length)];
+		return colors[getRandomInt(1, colors.length-1)];
 	}
 
 	/**
@@ -147,6 +146,8 @@ public class Grid {
 
 	/**
 	 * Moves all the spawned boxes in a direction specified
+	 * TODO check all gridboxes whose group has size >= MIN_CHAIN_SIZE 
+	 * set their color to NONE (empty)
 	 * @param direction
 	 */
 	public void move(Swipe direction) {
@@ -175,32 +176,43 @@ public class Grid {
 	private void moveLeft() {
 		// iterate through all colored boxes, starting at 
 		// the second top row
-		int secondTopLeftIndex = 1;
+		//		int secondTopLeftIndex = 1;
+		int secondTopLeftIndex = 0;
 		GridBox toMove = null;
 		GridBox destination = null;
 		for (int i = secondTopLeftIndex; i < width*height; i++) {
 			toMove = grid.get(i);
 
-			// also ignore leftmost column
-			if (toMove.isEmpty() || i%width == 0) continue;
-			else {
-				// find the leftmost non-colored box to move to
-				for (int j = 0;  j < width; j++) {
-					// find the index that is in the same row
-					int index = i - (i%width) + j;
-					if (index == i) break;
-					else {
-						destination = grid.get(index);
-						if (destination.isEmpty() 
-//								|| destination.getGroup().size >= MIN_CHAIN_SIZE
-								) {
-							destination.setPrevId( toMove.getId() );
-							destination.setColor( toMove.getColor() );
-							toMove.clearColor();
-						}
+			if (toMove.isEmpty() 
+					//					|| i%width == 0
+					) continue;
+			if (toMove.getGroup() != null) {
+				if (toMove.getGroup().size >= MIN_CHAIN_SIZE) {
+					toMove.setColor(Color.REMOVED);
+					toMove.setPrevId(-3);
+					numBoxSpawned--;
+					continue;
+				}
+			}
+
+			// find the leftmost non-colored box to move to
+			for (int j = 0;  j < width; j++) {
+				// find the index that is in the same row
+				int index = i - (i%width) + j;
+				if (index == i) break;
+				else {
+					destination = grid.get(index);
+					if (destination.isEmpty() 
+							|| destination.getColor() == Color.REMOVED
+							) {
+						destination.setPrevId( toMove.getId() );
+						destination.setColor( toMove.getColor() );
+						toMove.clearColor();
+						break;
 					}
 				}
 			}
+
 		}
 	}
 
@@ -210,31 +222,44 @@ public class Grid {
 	private void moveRight() {
 		// iterate through all colored boxes, starting at 
 		// the second rightmost bottom row
-		int secondRightBottomIndex = width*height - 2;
+		//		int secondRightBottomIndex = width*height - 2;
+		int secondRightBottomIndex = width*height - 1;
 		GridBox toMove = null;
 		GridBox destination = null;
 		for (int i = secondRightBottomIndex; i >= 0; i--) {
 			toMove = grid.get(i);
 
 			// also ignore rightmost column
-			if (toMove.isEmpty() || i%width == width-1) continue;
-			else {
-				// find the rightmost non-colored box to move to
-				for (int j = 0;  j < width; j++) {
-					// find the index that is in the same row
-					int index = (width - ((i%width) + 1)) - j + i;
-					if (index == i) break;
-					else {
-						destination = grid.get(index);
-						if (destination.isEmpty()
-//								|| destination.getGroup().size >= MIN_CHAIN_SIZE
-								) {
-							destination.setPrevId( toMove.getId() );
-							destination.setColor( toMove.getColor() );
-							toMove.clearColor();
-						}
+			if (toMove.isEmpty()
+					//					|| i%width == width-1
+					) continue;
+			if (toMove.getGroup() != null) {
+				if (toMove.getGroup().size >= MIN_CHAIN_SIZE) {
+					toMove.setColor(Color.REMOVED);
+					toMove.setPrevId(-3);
+					numBoxSpawned--;
+					continue;
+				}
+			}
+
+
+			// find the rightmost non-colored box to move to
+			for (int j = 0;  j < width; j++) {
+				// find the index that is in the same row
+				int index = (width - ((i%width) + 1)) - j + i;
+				if (index == i) break;
+				else {
+					destination = grid.get(index);
+					if (destination.isEmpty()
+							|| destination.getColor() == Color.REMOVED
+							) {
+						destination.setPrevId( toMove.getId() );
+						destination.setColor( toMove.getColor() );
+						toMove.clearColor();
+						break;
 					}
 				}
+
 			}
 		}
 	}
@@ -245,30 +270,41 @@ public class Grid {
 	private void moveDown() {
 		// iterate through all colored boxes, starting at 
 		// the second most bottom row
-		int secondLastRowIndex = width*(height-1) - 1;
+		//		int secondLastRowIndex = width*(height-1) - 1;
+		int secondLastRowIndex = width*height - 1;
 		GridBox toMove = null;
 		GridBox destination = null;
 		for (int i = secondLastRowIndex; i >= 0; i--) {
 			toMove = grid.get(i);
 			if (toMove.isEmpty()) continue;
-			else {
-				// find the most bottom non-colored box to move to
-				for (int j = 1; j <= height; j++) {
-					// find the index that is in the same column
-					int index = width*(height-j) + (i%width);	
-					if (index < i) break;
-					else {
-						destination = grid.get(index);
-						if (destination.isEmpty()
-//								|| destination.getGroup().size >= MIN_CHAIN_SIZE
-								) {
-							destination.setPrevId( toMove.getId() );
-							destination.setColor( toMove.getColor() );
-							toMove.clearColor();
-						}
+
+			if (toMove.getGroup() != null) {
+				if (toMove.getGroup().size >= MIN_CHAIN_SIZE) {
+					toMove.setColor(Color.REMOVED);
+					toMove.setPrevId(-3);
+					numBoxSpawned--;
+					continue;
+				}
+			}
+
+			// find the most bottom non-colored box to move to
+			for (int j = 1; j <= height; j++) {
+				// find the index that is in the same column
+				int index = width*(height-j) + (i%width);	
+				if (index < i) break;
+				else {
+					destination = grid.get(index);
+					if (destination.isEmpty()
+							|| destination.getColor() == Color.REMOVED
+							) {
+						destination.setPrevId( toMove.getId() );
+						destination.setColor( toMove.getColor() );
+						toMove.clearColor();
+						break;
 					}
 				}
 			}
+
 		}
 	}
 
@@ -278,47 +314,57 @@ public class Grid {
 	private void moveUp() {
 		// iterate through all colored boxes, starting at
 		// the second most top row
-		int secondTopRowIndex = width;
+		//		int secondTopRowIndex = width;
+		int secondTopRowIndex = 0;
 		GridBox toMove = null;
 		GridBox destination = null;
 		for (int i = secondTopRowIndex; i < width*height; i++) {
 			toMove = grid.get(i);
 			if (toMove.isEmpty()) continue;
-			else {
-				// find the topmost non-colored box to move to
-				for (int j = height; j >= 1; j--) {
-					// find the index that is in the same column
-					int index = width*(height-j) + (i%width);
-					if (index > i) break;
-					else {
-						destination = grid.get(index);
-						if (destination.isEmpty() 
-//								|| destination.getGroup().size >= MIN_CHAIN_SIZE
-								) {
-							destination.setPrevId( toMove.getId() );
-							destination.setColor( toMove.getColor() );
-							toMove.clearColor();
-						}
+
+			if (toMove.getGroup() != null) {
+				if (toMove.getGroup().size >= MIN_CHAIN_SIZE) {
+					toMove.setColor(Color.REMOVED);
+					toMove.setPrevId(-3);
+					numBoxSpawned--;
+					continue;
+				}
+			}
+
+			// find the topmost non-colored box to move to
+			for (int j = height; j >= 1; j--) {
+				// find the index that is in the same column
+				int index = width*(height-j) + (i%width);
+				if (index > i) break;
+				else {
+					destination = grid.get(index);
+					if (destination.isEmpty() 
+							|| destination.getColor() == Color.REMOVED
+							) {
+						destination.setPrevId( toMove.getId() );
+						destination.setColor( toMove.getColor() );
+						toMove.clearColor();
+						break;
 					}
 				}
 			}
+
 		}
 	}
-	
+
 	/**
-	 * TODO
 	 * Checks and updates all neighboring gridboxes if there are color matches
 	 * This is called after all gridboxes are moved.
 	 */
 	private Array<Group> updateColorMatchCounts() {
 		colorGroups.clear();
 		Array<GridBox> neighbors = new Array<GridBox>();
-		
+
 		// clear all thr groups made from previous update
 		for (GridBox g : grid) {
 			g.setGroup(null);
 		} 
-		
+
 		// iterate through all gridboxes to find non-diagonal match-colored neighbors 
 		// and update their groups
 		for (int i = 0; i < grid.size(); i++) {
@@ -326,20 +372,20 @@ public class Grid {
 			if (!g.isEmpty()) {
 				neighbors.clear();
 				neighbors = getNeighBors(g);
-				
+
 				for (GridBox n : neighbors) {
-					
+
 					// is n the same color ?
 					if (n.getColor() == g.getColor()) {
-						
+
 						// is n already added into a group ?
 						if (n.getGroup() == null) {
-							
+
 							// if g has a group
 							if (g.getGroup() != null) {
 								g.getGroup().add(n);
 								n.setGroup(g.getGroup());
-//								if (colorGroups.contains(g.getGroup(), false)) colorGroups.add(g.getGroup());
+								//								if (colorGroups.contains(g.getGroup(), false)) colorGroups.add(g.getGroup());
 							}
 							else {
 								Group group = new Group(g.getColor());
@@ -350,7 +396,7 @@ public class Grid {
 								colorGroups.add(group);
 							}
 						}
-						
+
 						// this means that we need to join the groups together as one
 						// if n's group does not contain this gridbox
 						else if (n.getGroup() != null 
@@ -372,7 +418,7 @@ public class Grid {
 		}
 		return colorGroups;
 	}
-	
+
 	/**
 	 * Returns non-diagonal neighboring gridboxes
 	 * @param g
@@ -381,28 +427,28 @@ public class Grid {
 	private Array<GridBox> getNeighBors(GridBox g) {
 		Array<GridBox> neighbors = new Array<GridBox>();
 		int index = g.getId()-1;
-		
+
 		// check boundary conditions
 		// add left neighbor
 		// except left columns
 		if (index % width != 0) 
 			neighbors.add(grid.get( index-1 ));
-		
+
 		// add top neighbor
 		// except top row
 		if (index >= width)
 			neighbors.add(grid.get( index-width ));
-		
+
 		// add right neighbor
 		// except right column
 		if (index % width != (width-1))
 			neighbors.add(grid.get( index+1 ));
-		
+
 		// add bottom neighbor
 		// except bottom row
 		if (index < (height-1)*width)
 			neighbors.add(grid.get( index+width ));
-		
+
 		return neighbors;
 	}
 

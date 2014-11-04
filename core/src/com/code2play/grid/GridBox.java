@@ -9,7 +9,7 @@ public class GridBox {
 	
 	/* color of the gridbox */
 	public enum Color {
-		NONE, BLUE, GREEN, RED, YELLOW;
+		NONE, BLUE, GREEN, RED, YELLOW, REMOVED;
 	}
 	
 	/* unique number for easy identification */
@@ -69,7 +69,7 @@ public class GridBox {
 	 * @return True iff empty, false otherwise
 	 */
 	public boolean isEmpty() {
-		return this.color == Color.NONE;
+		return this.color == Color.NONE ;
 	}
 	
 	/**
