@@ -46,6 +46,7 @@ public class GameScreen implements Screen {
 	private Group gridGroup;
 	
 	Swipe swipeDir = null;
+	private float animationTime = 0.15f; 
 	
 	// swipe direction
 	enum Swipe {
@@ -144,6 +145,8 @@ public class GameScreen implements Screen {
 	}
 
 	boolean firstMove = true;
+	float deltaTime = 0f;
+	Swipe prevSwipeDir = null;
 	@Override
 	/**
 	 * Calls upon World instance to update its entities, then 
@@ -161,15 +164,24 @@ public class GameScreen implements Screen {
 		}
 
 		// check input
-		if (swipeDir != null) {
+		//TODO double elimination case
+		if ((swipeDir != null
+				|| grid.getNumColorGroups() > 0
+				) && deltaTime >= animationTime //disable swipe directions
+												//proceed when animation finishes for all gridboxes (after animationTime)
+				) {
 			// update gridbox
-			grid.update(delta, swipeDir);
+			if (grid.getNumColorGroups() > 0) grid.update(delta, prevSwipeDir);
+			else grid.update(delta, swipeDir);
+			
+			prevSwipeDir = swipeDir == null ? prevSwipeDir : swipeDir;
 	
 			// process moves to be rendered
 			drawGrid(grid);
 			swipeDir = null;
 			
 			System.out.println(grid.getGrid());
+			deltaTime = 0f;
 		}
 			
 		// update
@@ -177,6 +189,9 @@ public class GameScreen implements Screen {
 
 		// draw
 		stage.draw();
+		
+		// update time
+		deltaTime += delta;
 	}
 
 	/**
@@ -197,8 +212,8 @@ public class GameScreen implements Screen {
 					gridBoxImg.setPosition(pos.x + (boxWidth/2f), pos.y + (boxHeight/2));
 					gridBoxImg.addAction(
 							parallel(
-							scaleTo(boxWidth, boxHeight, 0.15f, Interpolation.linear),
-							moveTo(pos.x, pos.y, 0.15f, Interpolation.linear)
+							scaleTo(boxWidth, boxHeight, animationTime, Interpolation.linear),
+							moveTo(pos.x, pos.y, animationTime, Interpolation.linear)
 							));
 					gridBox.setPrevId(-2); 										// not -1 again to avoid replaying spawning animation
 //					System.out.println("Added Color " + gridBox.getColor());
@@ -221,7 +236,7 @@ public class GameScreen implements Screen {
 									&& temp.getColor() == gridBox.getColor() ) {
 								Vector2 pos = gridCoordinates.get(gridBox.getId()-1);
 								gridBoxImg.addAction(
-										moveTo(pos.x, pos.y, 0.15f, Interpolation.linear)
+										moveTo(pos.x, pos.y, animationTime, Interpolation.linear)
 										);
 //								System.out.println("Move from " + (gridBox.getPrevId()-1) + " to " + (gridBox.getId()-1));
 								gridBox.setPrevId(-2);							// not -1 again to avoid replaying spawning animation

@@ -28,6 +28,7 @@ public class Grid {
 
 	private Array<Group> colorGroups;
 	private static final int MIN_CHAIN_SIZE = 3;
+	private int numMinChainGroup;
 
 	/**
 	 * Constructs an initially empty grid of dimension specified 
@@ -76,19 +77,37 @@ public class Grid {
 	 * @param deltaTime
 	 */
 	public void update(float deltaTime, Swipe direction) {
+		//TODO check if can eliminate any groups automatically
+		// if so, proceed to calling move(direction)
+		
 		// clear from last rendered frame
 		if (!firstMove) move(direction);
 		firstMove = false;
 
 		// spawn new gridbox
 		spawnRandomGridBox();
-		//		if (!done) {
-		//			spawnGridBoxAt(3, Color.RED);
-		//			done = true;
-		//		}
+//		if (!done) {
+//			spawnGridBoxAt(13, Color.RED);
+//			done = true;
+//		}
 
 		// update all group of color matches
 		updateColorMatchCounts();
+		numMinChainGroup = 0;
+		
+		for (Group g : colorGroups) {
+			if (g.size >= MIN_CHAIN_SIZE)
+				numMinChainGroup++;
+		}
+	}
+	
+	/**
+	 * Returns the number of same-color gridbox groups with number of members 
+	 * greater than or equal to MIN_CHAIN_SIZE found 
+	 * @return
+	 */
+	public int getNumColorGroups() {
+		return numMinChainGroup;
 	}
 
 	/**
@@ -369,7 +388,7 @@ public class Grid {
 		// and update their groups
 		for (int i = 0; i < grid.size(); i++) {
 			GridBox g = grid.get(i);
-			if (!g.isEmpty()) {
+			if (!g.isEmpty() && g.getColor() != Color.REMOVED) {
 				neighbors.clear();
 				neighbors = getNeighBors(g);
 
