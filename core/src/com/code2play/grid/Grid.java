@@ -79,28 +79,28 @@ public class Grid {
 	public void update(float deltaTime, Swipe direction) {
 		//TODO check if can eliminate any groups automatically
 		// if so, proceed to calling move(direction)
-		
+
 		// clear from last rendered frame
 		if (!firstMove) move(direction);
 		firstMove = false;
 
-		// spawn new gridbox
-		spawnRandomGridBox();
-//		if (!done) {
-//			spawnGridBoxAt(13, Color.RED);
-//			done = true;
-//		}
-
 		// update all group of color matches
 		updateColorMatchCounts();
 		numMinChainGroup = 0;
-		
+
 		for (Group g : colorGroups) {
 			if (g.size >= MIN_CHAIN_SIZE)
 				numMinChainGroup++;
 		}
+
+		// spawn new gridbox
+		if (numMinChainGroup == 0)	spawnRandomGridBox();
+		//				if (!done) {
+		//					spawnGridBoxAt(13, Color.RED);
+		//					done = true;
+		//				}
 	}
-	
+
 	/**
 	 * Returns the number of same-color gridbox groups with number of members 
 	 * greater than or equal to MIN_CHAIN_SIZE found 
@@ -144,7 +144,9 @@ public class Grid {
 
 	public GridBox.Color getRandomColor() {
 		GridBox.Color[] colors = GridBox.Color.values();
-		return colors[getRandomInt(1, colors.length-1)];
+		int colorLimit = 1;
+		if (width == 4 && height == 4) colorLimit = 2;
+		return colors[getRandomInt(1, colors.length-colorLimit)];
 	}
 
 	/**
