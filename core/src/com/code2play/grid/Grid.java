@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Array;
 import com.code2play.grid.GameScreen.Swipe;
 import com.code2play.grid.GridBox.Color;
@@ -18,6 +19,12 @@ import com.code2play.grid.GridBox.Color;
  */
 public class Grid {
 
+	/* state of the game */
+	private GameMain game;
+	private int numMovesLeft;
+	private float maxLevelTime;
+	private int numSwapsLeft;
+	
 	/* all the gridboxes in this grid */
 	private List<GridBox> grid;
 	private int width;
@@ -36,8 +43,8 @@ public class Grid {
 	 * @param width Number of gridboxes wide
 	 * @param height Number of gridboxes high
 	 */
-	public Grid(int width, int height) {
-		random = new Random();
+	public Grid(GameMain g, int width, int height) {
+		this(g);
 		System.out.println("Initializing grid with dimension " + 
 				width + "x" + height);
 		int totalNumBox = width*height;
@@ -52,6 +59,53 @@ public class Grid {
 			grid.add(box);
 		}
 		colorGroups = new Array<Group>();
+	}
+	
+	private Grid(GameMain g) {
+		game = g;
+		random = new Random();
+	}
+	
+	/**
+	 * Loads a level file with information about grid size,
+	 * spawn colored tiles, starting time, starting swaps, and
+	 * starting max moves allowed.
+	 * This method is used to construct grid object in Challenge mode
+	 * @param file Path in the assets to the level file
+	 */
+	public static Grid load(GameMain game, FileHandle file) {
+		Grid g = new Grid(game);
+		
+		// read off values
+		g.numMovesLeft = 5;
+		g.maxLevelTime = 120f;
+		g.numSwapsLeft = 5;
+		int width = 5;
+		int height = 5;
+		
+		// initialize grid data structure
+		// with dimensions
+		System.out.println("Initializing grid with dimension " + 
+				width + "x" + height);
+		int totalNumBox = width*height;
+		g.width = width;
+		g.height = height;
+		int currId = 1;
+		g.grid = new ArrayList<GridBox>(totalNumBox);
+
+		for (int i = 0; i < totalNumBox; i++) {
+			currId = i+1;
+			GridBox box = new GridBox(currId);
+			g.grid.add(box);
+		}
+		g.colorGroups = new Array<Group>();
+		
+		// spawn colored tiles from file
+//		g.spawnGridBoxAt(1, Color.GREEN);
+		for (int i = 0; i < 12; i++) 
+			g.spawnRandomGridBox();
+		
+		return g;
 	}
 
 	public int getWidth() {
@@ -69,6 +123,10 @@ public class Grid {
 	public int getSize() {
 		return grid.size();
 	}
+	
+	public int getMovesLeft() {
+		return numMovesLeft;
+	}
 
 	boolean firstMove = true;
 	boolean done = false;
@@ -77,12 +135,11 @@ public class Grid {
 	 * @param deltaTime
 	 */
 	public void update(float deltaTime, Swipe direction) {
-		//TODO check if can eliminate any groups automatically
-		// if so, proceed to calling move(direction)
-
 		// clear from last rendered frame
-		if (!firstMove) move(direction);
-		firstMove = false;
+		// TODO SWIPE TO BEGIN LEVEL
+//		if (!firstMove) move(direction);
+//		firstMove = false;
+		move(direction);
 
 		// update all group of color matches
 		updateColorMatchCounts();
@@ -94,7 +151,9 @@ public class Grid {
 		}
 
 		// spawn new gridbox
-		if (numMinChainGroup == 0)	spawnRandomGridBox();
+		if (numMinChainGroup == 0 
+				&& game.getGameMode() == GameMode.CLASSIC)	
+			spawnRandomGridBox();
 		//				if (!done) {
 		//					spawnGridBoxAt(13, Color.RED);
 		//					done = true;
@@ -164,6 +223,10 @@ public class Grid {
 		System.out.println("Spawned " + (id-1) + " color " + color + " ");
 		return box;
 	}
+	
+	public void decrNumMovesLeft() {
+		if (numMovesLeft > 0) numMovesLeft--;
+	}
 
 	/**
 	 * Moves all the spawned boxes in a direction specified
@@ -172,6 +235,8 @@ public class Grid {
 	 * @param direction
 	 */
 	public void move(Swipe direction) {
+		
+		//TODO handle swap logic here
 
 		switch(direction) {
 		case DOWN:

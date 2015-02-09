@@ -10,8 +10,15 @@ import com.code2play.grid.GridBox.Color;
 
 public class GameMain extends Game {
 	
+	/** All the screens **/
 	GameScreen gameScreen; 
+	
+	/** Game states **/
 	private Grid grid;
+	private GameMode gameMode;
+	private GameState gameState;
+	
+	/** Game state constants **/
 	private static final int DEFAULT_GRID_WIDTH = 4;
 	private static final int DEFAULT_GRID_HEIGHT = 4;
 	
@@ -22,11 +29,35 @@ public class GameMain extends Game {
 		System.out.println("Launching Grid");
 		
 		// initialize grid
-		grid = new Grid(DEFAULT_GRID_WIDTH, DEFAULT_GRID_HEIGHT);
+		//TODO done in puzzle choosing screen
+		gameMode = GameMode.CHALLENGE;
+		gameState = GameState.PLAYING;
 		
-		// set screen
-		gameScreen = new GameScreen(this);
-		this.setScreen(gameScreen);
+//		grid = new Grid(this, DEFAULT_GRID_WIDTH, DEFAULT_GRID_HEIGHT);		// normal mode
+		grid = Grid.load(this, Gdx.files.internal("1.lvl"));				// challenge mode
+		
+		// set screen TODO mainmenu screen, puzzle choosing screen
+		//TODO done in puzzle choosing screen
+		gameScreen = new GameScreen(this);	
+																// this game mode has to be set once main menu
+																// screen is chosen, and puzzle file is loaded
+		this.setScreen(gameScreen);								// this has to be main menu screen
+	}
+	
+	public GameState getCurrentState() {
+		return gameState;
+	}
+	
+	public void setGameState(GameState state) {
+		gameState = state;
+	}
+	
+	public GameMode getGameMode() {
+		return gameMode;
+	}
+	
+	public void setGameMode(GameMode mode) {
+		gameMode = mode;
 	}
 	
 	public Grid getGrid() {

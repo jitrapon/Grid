@@ -32,34 +32,34 @@ public class GameScreen implements Screen {
 	public static final int maxWidth = 1080;
 	public static final int maxHeight = 1920 ;
 	private static final int REMOVED = -3;
-	
+
 	private float boxWidth;
 	private float boxHeight;
 
 	private GameMain game;
 	private Grid grid;
 	private Skin skin;	//TODO
-	
+
 	private Map<Integer, Vector2> gridCoordinates;
 
 	private Group backgroundGroup;
 	private Group gridGroup;
-	
+
 	Swipe swipeDir = null;
 	private float animationTime = 0.15f; 
-	
+
 	// swipe direction
 	enum Swipe {
 		UP, LEFT, RIGHT, DOWN;
 	}
-	
+
 
 	public GameScreen(GameMain g) {
 		// game instance is the same one as the first created
 		game = g;
 		grid = game.getGrid();
 		camera = new OrthographicCamera();
-//		camera.setToOrtho(true);
+		//		camera.setToOrtho(true);
 		stage = new Stage( new ExtendViewport(width, height, maxWidth, maxHeight, camera) );
 		gridCoordinates = new HashMap<Integer, Vector2>();
 
@@ -83,31 +83,31 @@ public class GameScreen implements Screen {
 
 		// set input processor 
 		InputMultiplexer inMultiplexer = new InputMultiplexer();
-		
+
 		// customized gesture detector with direction detection
 		SimpleDirectionGestureDetector detector = new SimpleDirectionGestureDetector
 				(new SimpleDirectionGestureDetector.DirectionListener() {
-			
-			@Override
-			public void onUp() {
-				swipeDir = Swipe.UP;
-			}
 
-			@Override
-			public void onRight() {
-				swipeDir = Swipe.RIGHT;
-			}
+					@Override
+					public void onUp() {
+						swipeDir = Swipe.UP;
+					}
 
-			@Override
-			public void onLeft() {
-				swipeDir = Swipe.LEFT;
-			}
+					@Override
+					public void onRight() {
+						swipeDir = Swipe.RIGHT;
+					}
 
-			@Override
-			public void onDown() {
-				swipeDir = Swipe.DOWN;
-			}
-		});
+					@Override
+					public void onLeft() {
+						swipeDir = Swipe.LEFT;
+					}
+
+					@Override
+					public void onDown() {
+						swipeDir = Swipe.DOWN;
+					}
+				});
 		inMultiplexer.addProcessor(detector);
 		inMultiplexer.addProcessor(stage);
 		Gdx.input.setInputProcessor(inMultiplexer);
@@ -134,10 +134,10 @@ public class GameScreen implements Screen {
 				float x = (widthMargin+widthSpacing) + ((boxWidth+widthSpacing)*row);
 				float y = (startingHeight-heightSpacing-boxHeight) - ((boxHeight+heightSpacing)*col);
 				blankBox.setPosition(x, y);
-				
+
 				// remember this position for this id, so we don't need to calculate again
 				gridCoordinates.put( row+(grid.getWidth()*col), new Vector2(x,y) );
-				
+
 				// add actor to the group
 				gridGroup.addActor(blankBox);
 			}
@@ -147,51 +147,94 @@ public class GameScreen implements Screen {
 	boolean firstMove = true;
 	float deltaTime = 0f;
 	Swipe prevSwipeDir = null;
+	int prevMovesLeft = -1;
 	@Override
 	/**
 	 * Calls upon World instance to update its entities, then 
 	 * renders them by WorldView
 	 */
 	public void render(float delta) {
-		// clear screen
-		Gdx.gl.glClearColor(0, 0, 0, 1);
-		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-		
-		// render grid for the first time
-		if (firstMove) {
-			drawGrid(grid);
-			firstMove = false;
+
+		switch(game.getCurrentState()) {
+
+		case PLAYING:
+			
+			// clear screen
+			Gdx.gl.glClearColor(0, 0, 0, 1);
+			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+			// render grid for the first time
+			if (firstMove) {
+				drawGrid(grid);
+				firstMove = false;
+			}
+			
+			//TODO challenge mode
+			// draw timer, draw undo count, draw swap count, draw retry
+			// check input for tap on the colored tiles
+			// if there is a tap, then we don't process swipe direction events
+			// until the colored tile is tapped again
+			if (game.getGameMode() == GameMode.CHALLENGE) {
+				int movesLeft = grid.getMovesLeft();
+				if (prevMovesLeft != movesLeft) {
+					prevMovesLeft = movesLeft;
+					System.out.println("Moves left: " + grid.getMovesLeft());
+				}
+			}
+
+			// check input
+			//TODO double elimination case
+			if ((swipeDir != null
+					|| grid.getNumColorGroups() > 0
+					) && deltaTime >= animationTime //disable swipe directions
+					//proceed when animation finishes for all gridboxes (after animationTime)
+					) {
+				// update gridbox
+				if (grid.getNumColorGroups() > 0) grid.update(delta, prevSwipeDir);
+				else {
+					grid.update(delta, swipeDir);
+					grid.decrNumMovesLeft();
+				}
+
+				prevSwipeDir = swipeDir == null ? prevSwipeDir : swipeDir;
+
+				// process moves to be rendered
+				drawGrid(grid);
+				swipeDir = null;
+
+				System.out.println(grid.getGrid());
+				deltaTime = 0f;
+			}
+
+			// update
+			stage.act(delta);
+
+			// draw
+			stage.draw();
+
+			// update time
+			deltaTime += delta;
+
+			break;
+
+		case TIMEOUT:
+
+			break;
+
+		case PAUSED:
+
+			break;
+
+		case GAMEOVER:
+
+			break;
+
+		default:
+
+			break;
 		}
 
-		// check input
-		//TODO double elimination case
-		if ((swipeDir != null
-				|| grid.getNumColorGroups() > 0
-				) && deltaTime >= animationTime //disable swipe directions
-												//proceed when animation finishes for all gridboxes (after animationTime)
-				) {
-			// update gridbox
-			if (grid.getNumColorGroups() > 0) grid.update(delta, prevSwipeDir);
-			else grid.update(delta, swipeDir);
-			
-			prevSwipeDir = swipeDir == null ? prevSwipeDir : swipeDir;
-	
-			// process moves to be rendered
-			drawGrid(grid);
-			swipeDir = null;
-			
-			System.out.println(grid.getGrid());
-			deltaTime = 0f;
-		}
-			
-		// update
-		stage.act(delta);
 
-		// draw
-		stage.draw();
-		
-		// update time
-		deltaTime += delta;
 	}
 
 	/**
@@ -206,17 +249,17 @@ public class GameScreen implements Screen {
 				// recently spawned
 				if (gridBox.getPrevId() == -1) {
 					Image gridBoxImg = new Image( Assets.getColoredBox(gridBox.getColor()) );
-//					newGridBox.setSize(boxWidth, boxHeight);
+					//					newGridBox.setSize(boxWidth, boxHeight);
 					gridBoxImg.setSize(1, 1);
 					Vector2 pos = gridCoordinates.get(gridBox.getId()-1);
 					gridBoxImg.setPosition(pos.x + (boxWidth/2f), pos.y + (boxHeight/2));
 					gridBoxImg.addAction(
 							parallel(
-							scaleTo(boxWidth, boxHeight, animationTime, Interpolation.linear),
-							moveTo(pos.x, pos.y, animationTime, Interpolation.linear)
-							));
+									scaleTo(boxWidth, boxHeight, animationTime, Interpolation.linear),
+									moveTo(pos.x, pos.y, animationTime, Interpolation.linear)
+									));
 					gridBox.setPrevId(-2); 										// not -1 again to avoid replaying spawning animation
-//					System.out.println("Added Color " + gridBox.getColor());
+					//					System.out.println("Added Color " + gridBox.getColor());
 					gridBoxImg.setUserObject( new GridBox(gridBox.getId(), gridBox.getColor()) );
 					gridGroup.addActor(gridBoxImg);
 				}
@@ -238,15 +281,15 @@ public class GameScreen implements Screen {
 								gridBoxImg.addAction(
 										moveTo(pos.x, pos.y, animationTime, Interpolation.linear)
 										);
-//								System.out.println("Move from " + (gridBox.getPrevId()-1) + " to " + (gridBox.getId()-1));
+								//								System.out.println("Move from " + (gridBox.getPrevId()-1) + " to " + (gridBox.getId()-1));
 								gridBox.setPrevId(-2);							// not -1 again to avoid replaying spawning animation
-								
+
 								// update reference object
 								temp.setPrevId(gridBox.getPrevId());
 								temp.setId(gridBox.getId());
 								gridBoxImg.setUserObject(temp);
 							}
-							
+
 							// eliminates old gridbox color in group
 							else if ( temp.getId() == gridBox.getId()
 									&& temp.getColor() != gridBox.getColor() ) {
@@ -262,7 +305,7 @@ public class GameScreen implements Screen {
 				}
 			}
 		}
-		
+
 		// remove all grids marked as removed
 		iter = gridGroup.getChildren().iterator();
 		while (iter.hasNext()) {
