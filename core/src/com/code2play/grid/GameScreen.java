@@ -47,7 +47,7 @@ public class GameScreen implements Screen {
 
 	Swipe swipeDir = null;
 	private float animationTime = 0.15f; 
-
+	
 	// swipe direction
 	enum Swipe {
 		UP, LEFT, RIGHT, DOWN;
@@ -113,7 +113,8 @@ public class GameScreen implements Screen {
 		Gdx.input.setInputProcessor(inMultiplexer);
 	}
 
-	public void createGridFromMargins(float percentWidth, float percentHeight, float widthSpacing, float heightSpacing) {
+	public void createGridFromMargins(float percentWidth, float percentHeight, 
+			float widthSpacing, float heightSpacing) {
 		float widthMargin = percentWidth*stage.getWidth();
 		float heightMargin  = (percentHeight) *stage.getHeight();
 		float startingHeight = stage.getHeight() - heightMargin;
@@ -170,7 +171,8 @@ public class GameScreen implements Screen {
 			}
 			
 			//TODO challenge mode
-			// draw timer, draw undo count, draw swap count, draw retry
+			// draw timer, draw undo count, draw swap count, draw retry, draw pop (make one tile disappear),
+			// draw relocate (move one tile to empty tile)
 			// check input for tap on the colored tiles
 			// if there is a tap, then we don't process swipe direction events
 			// until the colored tile is tapped again
@@ -193,7 +195,7 @@ public class GameScreen implements Screen {
 				if (grid.getNumColorGroups() > 0) grid.update(delta, prevSwipeDir);
 				else {
 					grid.update(delta, swipeDir);
-					grid.decrNumMovesLeft();
+					grid.updateMoveCount();
 				}
 
 				prevSwipeDir = swipeDir == null ? prevSwipeDir : swipeDir;

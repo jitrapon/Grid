@@ -19,10 +19,17 @@ import com.code2play.grid.GridBox.Color;
  */
 public class Grid {
 
-	/* state of the game */
+	/* State of the game */
 	private GameMain game;
-	private int numMovesLeft;
+	
+	/* Number of maximum moves allowed before gameover */
+	private int numMovesLeft;			
+	
+	/* Time in millisec in this level before gameover. 
+	 * Set as negative for infinite */
 	private float maxLevelTime;
+	
+	/* Starting number of swaps in this level */
 	private int numSwapsLeft;
 	
 	/* all the gridboxes in this grid */
@@ -36,6 +43,9 @@ public class Grid {
 	private Array<Group> colorGroups;
 	private static final int MIN_CHAIN_SIZE = 3;
 	private int numMinChainGroup;
+	
+	/******************************************************************************************/
+	/************************************ INIT METHODS **************************************/
 
 	/**
 	 * Constructs an initially empty grid of dimension specified 
@@ -75,38 +85,86 @@ public class Grid {
 	 */
 	public static Grid load(GameMain game, FileHandle file) {
 		Grid g = new Grid(game);
+		int width = 0;
+		int height = 0;
+		g.numMovesLeft = 0;
+		g.maxLevelTime = 0f;
+		g.numSwapsLeft = 0;
 		
-		// read off values
-		g.numMovesLeft = 5;
-		g.maxLevelTime = 120f;
-		g.numSwapsLeft = 5;
-		int width = 5;
-		int height = 5;
-		
-		// initialize grid data structure
-		// with dimensions
-		System.out.println("Initializing grid with dimension " + 
-				width + "x" + height);
-		int totalNumBox = width*height;
-		g.width = width;
-		g.height = height;
-		int currId = 1;
-		g.grid = new ArrayList<GridBox>(totalNumBox);
+		// read the file and split the string into extractable content
+		// initialize grid properties
+		String content = file.readString();
+		String[] lines = content.split("\n");
+		String[] gridInfo = new String[]{};
+		int lineNum = 0;
+		int totalNumBox = 0;
+		for (int i = 0; i < lines.length; i++) {
+			if (lines[i].startsWith("//"))
+				continue;
+			else {
+				String[] tokens = lines[i].split(",");
+				
+				// first line is grid details
+				if (lineNum == 0) {
+					width = Integer.parseInt(tokens[0]);
+					height = Integer.parseInt(tokens[1]);
+					g.numMovesLeft = Integer.parseInt(tokens[2]);
+					g.maxLevelTime = Float.parseFloat(tokens[3]);
+					g.numSwapsLeft = Integer.parseInt(tokens[4]);
+					
+					// initialize grid data structure
+					// with dimensions
+					System.out.println("Initializing grid with dimension " + 
+							width + "x" + height);
+					totalNumBox = width*height;
+					g.width = width;
+					g.height = height;
+					int currId = 1;
+					g.grid = new ArrayList<GridBox>(totalNumBox);
 
-		for (int i = 0; i < totalNumBox; i++) {
-			currId = i+1;
-			GridBox box = new GridBox(currId);
-			g.grid.add(box);
+					for (int j = 0; j < totalNumBox; j++) {
+						currId = j+1;
+						GridBox box = new GridBox(currId);
+						g.grid.add(box);
+					}
+					g.colorGroups = new Array<Group>();
+					
+					lineNum++;
+				}
+				
+				// second line is grid tile info
+				else if (lineNum == 1) {
+					for (int j = 0; j < totalNumBox; j++) {
+						Color color = Color.NONE;
+						if (tokens[j].equals("x") || tokens[j].equals("^"))
+							color = Color.NONE;
+						else if (tokens[j].equals("b"))
+							color = Color.BLUE;
+						else if (tokens[j].equals("g"))
+							color = Color.GREEN;
+						else if (tokens[j].equals("r"))
+							color = Color.RED;
+						else if (tokens[j].equals("y"))
+							color = Color.YELLOW;
+						else if (tokens[j].equals("?"))
+							color = g.getRandomColor();
+						
+						g.spawnGridBoxAt(j+1, color);
+					} 
+				}
+			}
 		}
-		g.colorGroups = new Array<Group>();
 		
 		// spawn colored tiles from file
 //		g.spawnGridBoxAt(1, Color.GREEN);
-		for (int i = 0; i < 12; i++) 
-			g.spawnRandomGridBox();
+//		for (int i = 0; i < 12; i++) 
+//			g.spawnRandomGridBox();
 		
 		return g;
 	}
+	
+	/******************************************************************************************/
+	/************************************ GETTER METHODS **************************************/
 
 	public int getWidth() {
 		return width;
@@ -124,9 +182,78 @@ public class Grid {
 		return grid.size();
 	}
 	
+	/**
+	 * Returns the number of possible moves (eg. swipe, swap) allowed left
+	 * in this level
+	 * @return
+	 */
 	public int getMovesLeft() {
 		return numMovesLeft;
 	}
+	
+	public float getTimeLeft() {
+		return maxLevelTime;
+	}
+	
+	public int getNumSwapsLeft() {
+		return numSwapsLeft;
+	}
+
+	
+	/**
+	 * Returns the number of same-color gridbox groups with number of members 
+	 * greater than or equal to MIN_CHAIN_SIZE found 
+	 * @return
+	 */
+	public int getNumColorGroups() {
+		return numMinChainGroup;
+	}
+
+	/**
+	 * Returns next random integer in range specified
+	 * @param min inclusive
+	 * @param max exclusive
+	 * @return
+	 */
+	private int getRandomInt(int min, int max) {
+		return random.nextInt(max-min) + min;
+	}
+	
+	/**
+	 * Returns non-diagonal neighboring gridboxes
+	 * @param g
+	 * @return
+	 */
+	private Array<GridBox> getNeighBors(GridBox g) {
+		Array<GridBox> neighbors = new Array<GridBox>();
+		int index = g.getId()-1;
+
+		// check boundary conditions
+		// add left neighbor
+		// except left columns
+		if (index % width != 0) 
+			neighbors.add(grid.get( index-1 ));
+
+		// add top neighbor
+		// except top row
+		if (index >= width)
+			neighbors.add(grid.get( index-width ));
+
+		// add right neighbor
+		// except right column
+		if (index % width != (width-1))
+			neighbors.add(grid.get( index+1 ));
+
+		// add bottom neighbor
+		// except bottom row
+		if (index < (height-1)*width)
+			neighbors.add(grid.get( index+width ));
+
+		return neighbors;
+	}
+	
+	/******************************************************************************************/
+	/************************************ UPDATE METHODS **************************************/
 
 	boolean firstMove = true;
 	boolean done = false;
@@ -159,24 +286,13 @@ public class Grid {
 		//					done = true;
 		//				}
 	}
-
+	
 	/**
-	 * Returns the number of same-color gridbox groups with number of members 
-	 * greater than or equal to MIN_CHAIN_SIZE found 
-	 * @return
+	 * Call this method to decrement the move counts from the maximum
+	 * possible moves allowed in a level
 	 */
-	public int getNumColorGroups() {
-		return numMinChainGroup;
-	}
-
-	/**
-	 * Returns next random integer in range specified
-	 * @param min inclusive
-	 * @param max exclusive
-	 * @return
-	 */
-	private int getRandomInt(int min, int max) {
-		return random.nextInt(max-min) + min;
+	public void updateMoveCount() {
+		if (numMovesLeft > 0) numMovesLeft--;
 	}
 
 	/**
@@ -224,10 +340,6 @@ public class Grid {
 		return box;
 	}
 	
-	public void decrNumMovesLeft() {
-		if (numMovesLeft > 0) numMovesLeft--;
-	}
-
 	/**
 	 * Moves all the spawned boxes in a direction specified
 	 * TODO check all gridboxes whose group has size >= MIN_CHAIN_SIZE 
@@ -504,39 +616,9 @@ public class Grid {
 		}
 		return colorGroups;
 	}
-
-	/**
-	 * Returns non-diagonal neighboring gridboxes
-	 * @param g
-	 * @return
-	 */
-	private Array<GridBox> getNeighBors(GridBox g) {
-		Array<GridBox> neighbors = new Array<GridBox>();
-		int index = g.getId()-1;
-
-		// check boundary conditions
-		// add left neighbor
-		// except left columns
-		if (index % width != 0) 
-			neighbors.add(grid.get( index-1 ));
-
-		// add top neighbor
-		// except top row
-		if (index >= width)
-			neighbors.add(grid.get( index-width ));
-
-		// add right neighbor
-		// except right column
-		if (index % width != (width-1))
-			neighbors.add(grid.get( index+1 ));
-
-		// add bottom neighbor
-		// except bottom row
-		if (index < (height-1)*width)
-			neighbors.add(grid.get( index+width ));
-
-		return neighbors;
-	}
+	
+	/**************************************************************************************************/
+	/*************************************** AUXILIARY METHODS ****************************************/
 
 	public void debugDraw() {
 		for (int h = 0; h < height; h++) {

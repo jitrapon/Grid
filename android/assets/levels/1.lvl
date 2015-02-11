@@ -1,0 +1,4 @@
+//Grid Details:<width>,<height>,<maxMoves>,<maxTime>,<baseSwaps>
+//Grid Tiles, x=none, ^=block, b=blue, g=green, r=red, y=yellow, ?=random
+4,4,10,-1,5
+x,r,x,g,b,b,x,x,b,x,r,r,x,x,g,g

@@ -2,11 +2,6 @@ package com.code2play.grid;
 
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.code2play.grid.GridBox.Color;
 
 public class GameMain extends Game {
 	
@@ -22,6 +17,22 @@ public class GameMain extends Game {
 	private static final int DEFAULT_GRID_WIDTH = 4;
 	private static final int DEFAULT_GRID_HEIGHT = 4;
 	
+	/* Android UI element interface */
+	ActionResolver actionResolver;
+	
+	/**
+	 * Ctor for Android application
+	 * @param actionResolver
+	 */
+	public GameMain(ActionResolver actionResolver) {
+		this.actionResolver = actionResolver;
+	}
+	
+	/**
+	 * Ctor for iOS application
+	 */
+	public GameMain() {}
+
 	@Override
 	public void create () {
 		// loading resources, etc.
@@ -33,8 +44,10 @@ public class GameMain extends Game {
 		gameMode = GameMode.CHALLENGE;
 		gameState = GameState.PLAYING;
 		
-//		grid = new Grid(this, DEFAULT_GRID_WIDTH, DEFAULT_GRID_HEIGHT);		// normal mode
-		grid = Grid.load(this, Gdx.files.internal("1.lvl"));				// challenge mode
+		if (gameMode == GameMode.CLASSIC)
+			grid = new Grid(this, DEFAULT_GRID_WIDTH, DEFAULT_GRID_HEIGHT);			// normal mode
+		else if (gameMode == GameMode.CHALLENGE)
+			grid = Grid.load(this, Gdx.files.internal("levels/1.lvl"));				// challenge mode
 		
 		// set screen TODO mainmenu screen, puzzle choosing screen
 		//TODO done in puzzle choosing screen
@@ -42,6 +55,7 @@ public class GameMain extends Game {
 																// this game mode has to be set once main menu
 																// screen is chosen, and puzzle file is loaded
 		this.setScreen(gameScreen);								// this has to be main menu screen
+		actionResolver.showLongToast("Welcome to Grid!");
 	}
 	
 	public GameState getCurrentState() {
