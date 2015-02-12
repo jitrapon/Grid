@@ -17,9 +17,12 @@ import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Group;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.utils.DragListener;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.code2play.grid.GridBox.Color;
 
@@ -47,7 +50,14 @@ public class GameScreen implements Screen {
 
 	Swipe swipeDir = null;
 	private float animationTime = 0.15f; 
-	
+
+	/** Image ID that will be swapped to **/
+	private int firstSwapID;
+
+	/** Image ID that will be swapped with **/
+	private int secondSwapID;
+
+
 	// swipe direction
 	enum Swipe {
 		UP, LEFT, RIGHT, DOWN;
@@ -55,6 +65,7 @@ public class GameScreen implements Screen {
 
 
 	public GameScreen(GameMain g) {
+
 		// game instance is the same one as the first created
 		game = g;
 		grid = game.getGrid();
@@ -62,6 +73,8 @@ public class GameScreen implements Screen {
 		//		camera.setToOrtho(true);
 		stage = new Stage( new ExtendViewport(width, height, maxWidth, maxHeight, camera) );
 		gridCoordinates = new HashMap<Integer, Vector2>();
+		firstSwapID = -1;
+		secondSwapID = -1;
 
 		// create all groups to hold the actors
 		backgroundGroup = new Group();
@@ -81,34 +94,55 @@ public class GameScreen implements Screen {
 		stage.addActor(backgroundGroup);
 		stage.addActor(gridGroup);
 
+		// set stage inputlistener
+		DragListener listener = new DragListener() {
+			private float startDragX;
+			private float startDragY;
+
+			@Override
+			public void dragStart(
+					InputEvent event, float x, float y, int pointer) {
+				startDragX = x;
+				startDragY = y;
+			}
+
+			@Override
+			// as soon as threshold is reached, figure out the swipe direction and set
+			// swipeDir, then return
+			public void drag(InputEvent event, float x, float y, int pointer) {
+				float dragThresHold = 100;
+
+				// left drag
+				if (x-startDragX < -1*dragThresHold) {
+					swipeDir = Swipe.LEFT;
+					this.cancel();
+				}
+
+				// right drag
+				else if (x-startDragX > dragThresHold) {
+					swipeDir = Swipe.RIGHT;
+					this.cancel();
+				}
+
+				// drag up
+				else if (y-startDragY > dragThresHold) {
+					swipeDir = Swipe.UP;
+					this.cancel();
+				}
+
+				// drag down
+				else if (y-startDragY < -1*dragThresHold) {
+					swipeDir = Swipe.DOWN;
+					this.cancel();
+				}
+			}
+		};
+		listener.setTapSquareSize(10);	// TODO change this to percentage of screen size
+		stage.addListener(listener);
+
 		// set input processor 
 		InputMultiplexer inMultiplexer = new InputMultiplexer();
 
-		// customized gesture detector with direction detection
-		SimpleDirectionGestureDetector detector = new SimpleDirectionGestureDetector
-				(new SimpleDirectionGestureDetector.DirectionListener() {
-
-					@Override
-					public void onUp() {
-						swipeDir = Swipe.UP;
-					}
-
-					@Override
-					public void onRight() {
-						swipeDir = Swipe.RIGHT;
-					}
-
-					@Override
-					public void onLeft() {
-						swipeDir = Swipe.LEFT;
-					}
-
-					@Override
-					public void onDown() {
-						swipeDir = Swipe.DOWN;
-					}
-				});
-		inMultiplexer.addProcessor(detector);
 		inMultiplexer.addProcessor(stage);
 		Gdx.input.setInputProcessor(inMultiplexer);
 	}
@@ -159,7 +193,7 @@ public class GameScreen implements Screen {
 		switch(game.getCurrentState()) {
 
 		case PLAYING:
-			
+
 			// clear screen
 			Gdx.gl.glClearColor(0, 0, 0, 1);
 			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -169,7 +203,7 @@ public class GameScreen implements Screen {
 				drawGrid(grid);
 				firstMove = false;
 			}
-			
+
 			//TODO challenge mode
 			// draw timer, draw undo count, draw swap count, draw retry, draw pop (make one tile disappear),
 			// draw relocate (move one tile to empty tile)
@@ -263,6 +297,56 @@ public class GameScreen implements Screen {
 					gridBox.setPrevId(-2); 										// not -1 again to avoid replaying spawning animation
 					//					System.out.println("Added Color " + gridBox.getColor());
 					gridBoxImg.setUserObject( new GridBox(gridBox.getId(), gridBox.getColor()) );
+
+					// add touch listener
+					gridBoxImg.addListener(new InputListener() {
+						@Override
+						public boolean touchDown(InputEvent event, float x, float y,
+								int pointer, int button) {
+							//TODO
+							return true;
+						}
+
+						@Override
+						public void touchUp (InputEvent event, float x, float y, 
+								int pointer, int button) {
+							Image img = (Image) event.getListenerActor();
+							int touchID = ((GridBox)img.getUserObject()).getId();
+
+							// if player has not selected any other tile before this
+							// make this image ID the first swap image ID
+							if (firstSwapID == -1) {
+								//								img.addAction(
+								//										scaleTo(20f, 20f, .1f)
+								//										);
+								firstSwapID = touchID;
+								Gdx.app.log("Swap 1", "Selected image ID " + firstSwapID);
+							}
+
+							// if player has selected the same image that was selected as the first swap,
+							// reset the first swap image
+							else if (firstSwapID == touchID) {
+								//								img.addAction(
+								//										scaleTo(-.5f, -.5f, .1f)
+								//										);
+								Gdx.app.log("Swap 1", "Deselected image ID " + firstSwapID);
+								firstSwapID = -1;
+							}
+
+							// if the first swap image has already been selected, then set this image
+							// to be the second swap and change their previous IDs accordingly
+							else {
+								secondSwapID = touchID;
+								Gdx.app.log("Swap 2", "Swap " + firstSwapID + " with " + secondSwapID);
+
+
+								firstSwapID = -1;
+								secondSwapID = -1;
+							}
+
+
+						}
+					});
 					gridGroup.addActor(gridBoxImg);
 				}
 
