@@ -25,7 +25,8 @@ public class GridBox {
 	/* group of neighboring same-color gridboxes */
 	private Group group;
 	
-	/* whether or not this 
+	/** whether or not this grid box is ready to be removed from rendered list **/
+	public boolean removed;
 	
 	/**
 	 * Constructs an initially empty gridbox with a specified id
@@ -35,6 +36,7 @@ public class GridBox {
 		color = Color.NONE;
 		prevId = -1;
 		group = null;
+		removed = false;
 	}
 	
 	/**

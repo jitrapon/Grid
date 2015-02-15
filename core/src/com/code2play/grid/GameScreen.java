@@ -29,6 +29,7 @@ import com.code2play.grid.GridBox.Color;
 
 public class GameScreen implements Screen {
 
+	// Grid constants
 	private Stage stage;
 	private OrthographicCamera camera;
 	public static final int width = 720;
@@ -36,21 +37,35 @@ public class GameScreen implements Screen {
 	public static final int maxWidth = 1080;
 	public static final int maxHeight = 1920 ;
 	private static final int REMOVED = -3;
-
 	private float boxWidth;
 	private float boxHeight;
 
+	/** Instance of the Game object that contains game state information **/
 	private GameMain game;
+
+	/** Grid instance that contains all underlying data structure of the grid **/
 	private Grid grid;
+
+	/** Skin of the rendered objects onscreen **/
 	private Skin skin;	//TODO
 
+	/** Calculated coordinates of all the grid boxes for easy reference **/
 	private Map<Integer, Vector2> gridCoordinates;
 
+	/** Group of background images **/
 	private Group backgroundGroup;
+
+	/** Group that contains all spawned images of colored tiles **/
 	private Group gridGroup;
 
+	/** Swipe direction determined from drag direction **/
 	Swipe swipeDir = null;
-	private float animationTime = 0.15f; 
+
+	/** Animation time in seconds of the grid movements **/
+	private float gridBoxMoveAnimTime = 0.15f; 
+
+	/** Animation time in seconds in clearing gridboxes **/
+	private float gridBoxClearAnimTime = 0f;
 
 	/** Image ID that will be swapped to **/
 	private int firstSwapID;
@@ -62,7 +77,7 @@ public class GameScreen implements Screen {
 	 * player has already swiped in a direction
 	 */
 	private boolean hasDragged;
-	
+
 	/** Indicates whether a swap has happened **/
 	private boolean hasSwapped;
 
@@ -72,12 +87,15 @@ public class GameScreen implements Screen {
 	private static float DRAG_MIN_THRESHOLD = 50f;
 
 
-	// swipe direction
+	/** All the swipe directions for easy reference **/
 	enum Swipe {
 		UP, LEFT, RIGHT, DOWN;
 	}
 
-
+	/**
+	 * Ctor of this game screen, using the Game object as game state information
+	 * @param g
+	 */
 	public GameScreen(GameMain g) {
 
 		// game instance is the same one as the first created
@@ -254,12 +272,12 @@ public class GameScreen implements Screen {
 
 			// check input
 			//TODO double elimination case
-			if ((swipeDir != null
-					|| grid.getNumColorGroups() > 0 || hasSwapped
-					) && deltaTime >= animationTime //disable swipe directions
+			if ((swipeDir != null || grid.getNumColorGroups() > 0 || hasSwapped) 
+
+					//disable swipe directions
 					//proceed when animation finishes for all gridboxes (after animationTime)
-					) {
-				
+					&& deltaTime >= (gridBoxMoveAnimTime + gridBoxClearAnimTime)) {
+
 				// update gridbox - swipe
 				if (!hasSwapped) {
 					if (grid.getNumColorGroups() > 0 && prevSwipeDir != null) 
@@ -268,9 +286,17 @@ public class GameScreen implements Screen {
 						grid.update(delta, swipeDir);
 						grid.updateMoveCount();
 					}
+
+					// we add slight delay for the animation of claring gridboxes to proceed
+					// before continuing
+					if (grid.getNumColorGroups() > 0)
+						gridBoxClearAnimTime = 0.35f;
+					else
+						gridBoxClearAnimTime = 0f;
+
 					prevSwipeDir = swipeDir == null ? null : swipeDir;
 				}
-				
+
 				// update gridbox - swap
 				else {
 					grid.update(delta, firstSwapID, secondSwapID);
@@ -280,11 +306,14 @@ public class GameScreen implements Screen {
 				}
 
 				// process moves to be rendered
+				// and set necessary actions for stage to draw
 				drawGrid(grid);
+
+				// reset values
 				swipeDir = null;
 				hasSwapped = false;
 
-				System.out.println(grid.getGrid());
+//				System.out.println(grid.getGrid());
 				deltaTime = 0f;
 			}
 
@@ -296,6 +325,7 @@ public class GameScreen implements Screen {
 
 			// update time
 			deltaTime += delta;
+
 
 			break;
 
@@ -338,8 +368,8 @@ public class GameScreen implements Screen {
 					gridBoxImg.setPosition(pos.x + (boxWidth/2f), pos.y + (boxHeight/2));
 					gridBoxImg.addAction(
 							parallel(
-									scaleTo(boxWidth, boxHeight, animationTime, Interpolation.linear),
-									moveTo(pos.x, pos.y, animationTime, Interpolation.linear)
+									scaleTo(boxWidth, boxHeight, gridBoxMoveAnimTime, Interpolation.linear),
+									moveTo(pos.x, pos.y, gridBoxMoveAnimTime, Interpolation.linear)
 									));
 					gridBox.setPrevId(-2); 										// not -1 again to avoid replaying spawning animation
 					//					System.out.println("Added Color " + gridBox.getColor());
@@ -405,6 +435,7 @@ public class GameScreen implements Screen {
 
 				// recently moved
 				else {
+
 					// get stage actor under gridGroup of userobjecttype with id = move.originId and 
 					// update it to move.destId
 					// add move transition animation
@@ -415,10 +446,12 @@ public class GameScreen implements Screen {
 						GridBox temp = (GridBox) gridBoxImg.getUserObject();
 						if (temp != null) {
 							if ( temp.getId() == gridBox.getPrevId()  
-									&& temp.getColor() == gridBox.getColor() ) {
+									&& temp.getColor() == gridBox.getColor()
+//									&& temp.getPrevId() != REMOVED 
+									) {
 								Vector2 pos = gridCoordinates.get(gridBox.getId()-1);
 								gridBoxImg.addAction(
-										moveTo(pos.x, pos.y, animationTime, Interpolation.linear)
+										moveTo(pos.x, pos.y, gridBoxMoveAnimTime, Interpolation.linear)
 										);
 								//								System.out.println("Move from " + (gridBox.getPrevId()-1) + " to " + (gridBox.getId()-1));
 								gridBox.setPrevId(-2);							// not -1 again to avoid replaying spawning animation
@@ -430,9 +463,10 @@ public class GameScreen implements Screen {
 							}
 
 							// eliminates old gridbox color in group
+							//TODO BUG: when new gridbox of the same color is moved to
+							// the tile that will be removed
 							else if ( temp.getId() == gridBox.getId()
 									&& temp.getColor() != gridBox.getColor() ) {
-								//TODO eliminate it
 								temp.setPrevId(REMOVED);							// mark as removed 
 								if (gridBox.getColor() == Color.REMOVED) {
 									gridBox.setColor(Color.NONE);
@@ -451,8 +485,28 @@ public class GameScreen implements Screen {
 			Actor gridBoxImg = iter.next();
 			GridBox temp = (GridBox) gridBoxImg.getUserObject();
 			if (temp != null) 
-				if (temp.getPrevId() == REMOVED) 
-					iter.remove();
+				if (temp.getPrevId() == REMOVED) {
+					// if remove action is not set for this gridbox, add it
+					if (!temp.removed) {
+						gridBoxImg.addAction(
+								parallel(
+										scaleTo(0, 0, .08f, Interpolation.linear),
+										moveTo(gridBoxImg.getX() + boxHeight/2, gridBoxImg.getY() + boxWidth/2, 
+												.08f, Interpolation.linear)
+								));
+						temp.removed = true;
+//						Gdx.app.log("ADD ACTION", "GRID ID " + temp.getId() + " ADDED ACTION! (" 
+//								+ gridBoxClearAnimTime + ")");
+					}
+
+					// else if action is completed, remove it from list to be rendered
+					else {
+						if (gridBoxImg.getActions().size == 0) {
+//							Gdx.app.log("REMOVE", "GRID ID " + temp.getId() + " REMOVED!");
+							iter.remove();
+						}
+					}
+				}
 		}
 	}
 
