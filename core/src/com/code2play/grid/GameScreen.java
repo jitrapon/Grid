@@ -3,6 +3,7 @@ package com.code2play.grid;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.moveTo;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.parallel;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.scaleTo;
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.alpha;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -57,6 +58,19 @@ public class GameScreen implements Screen {
 	/** Image ID that will be swapped with **/
 	private int secondSwapID;
 
+	/** Keeps track of disabling touch input to colored tiles when 
+	 * player has already swiped in a direction
+	 */
+	private boolean hasDragged;
+	
+	/** Indicates whether a swap has happened **/
+	private boolean hasSwapped;
+
+	/** Minimum distance in virtual coordinates to determine 
+	 * dragging direction
+	 */
+	private static float DRAG_MIN_THRESHOLD = 50f;
+
 
 	// swipe direction
 	enum Swipe {
@@ -110,30 +124,50 @@ public class GameScreen implements Screen {
 			// as soon as threshold is reached, figure out the swipe direction and set
 			// swipeDir, then return
 			public void drag(InputEvent event, float x, float y, int pointer) {
-				float dragThresHold = 100;
 
-				// left drag
-				if (x-startDragX < -1*dragThresHold) {
-					swipeDir = Swipe.LEFT;
+				// only detects swiping direction when the player has not 
+				// selected any colored tile
+				if (firstSwapID != -1) {
+					swipeDir = null;
 					this.cancel();
 				}
+				else {
 
-				// right drag
-				else if (x-startDragX > dragThresHold) {
-					swipeDir = Swipe.RIGHT;
-					this.cancel();
-				}
+					// left drag
+					if (x-startDragX < -1*DRAG_MIN_THRESHOLD) {
+						swipeDir = Swipe.LEFT;
+						hasDragged = true;
+						firstSwapID = -1;
+						secondSwapID = -1;
+						this.cancel();
+					}
 
-				// drag up
-				else if (y-startDragY > dragThresHold) {
-					swipeDir = Swipe.UP;
-					this.cancel();
-				}
+					// right drag
+					else if (x-startDragX > DRAG_MIN_THRESHOLD) {
+						swipeDir = Swipe.RIGHT;
+						hasDragged = true;
+						firstSwapID = -1;
+						secondSwapID = -1;
+						this.cancel();
+					}
 
-				// drag down
-				else if (y-startDragY < -1*dragThresHold) {
-					swipeDir = Swipe.DOWN;
-					this.cancel();
+					// drag up
+					else if (y-startDragY > DRAG_MIN_THRESHOLD) {
+						swipeDir = Swipe.UP;
+						hasDragged = true;
+						firstSwapID = -1;
+						secondSwapID = -1;
+						this.cancel();
+					}
+
+					// drag down
+					else if (y-startDragY < -1*DRAG_MIN_THRESHOLD) {
+						swipeDir = Swipe.DOWN;
+						hasDragged = true;
+						firstSwapID = -1;
+						secondSwapID = -1;
+						this.cancel();
+					}
 				}
 			}
 		};
@@ -221,22 +255,34 @@ public class GameScreen implements Screen {
 			// check input
 			//TODO double elimination case
 			if ((swipeDir != null
-					|| grid.getNumColorGroups() > 0
+					|| grid.getNumColorGroups() > 0 || hasSwapped
 					) && deltaTime >= animationTime //disable swipe directions
 					//proceed when animation finishes for all gridboxes (after animationTime)
 					) {
-				// update gridbox
-				if (grid.getNumColorGroups() > 0) grid.update(delta, prevSwipeDir);
-				else {
-					grid.update(delta, swipeDir);
-					grid.updateMoveCount();
+				
+				// update gridbox - swipe
+				if (!hasSwapped) {
+					if (grid.getNumColorGroups() > 0 && prevSwipeDir != null) 
+						grid.update(delta, prevSwipeDir);
+					else if (swipeDir != null){
+						grid.update(delta, swipeDir);
+						grid.updateMoveCount();
+					}
+					prevSwipeDir = swipeDir == null ? null : swipeDir;
 				}
-
-				prevSwipeDir = swipeDir == null ? prevSwipeDir : swipeDir;
+				
+				// update gridbox - swap
+				else {
+					grid.update(delta, firstSwapID, secondSwapID);
+					grid.updateMoveCount();
+					firstSwapID = -1;
+					secondSwapID = -1;
+				}
 
 				// process moves to be rendered
 				drawGrid(grid);
 				swipeDir = null;
+				hasSwapped = false;
 
 				System.out.println(grid.getGrid());
 				deltaTime = 0f;
@@ -277,6 +323,7 @@ public class GameScreen implements Screen {
 	 * Renders all the stuff that needs to be drawn from the grid
 	 * @param grid
 	 */
+	Image firstSwapImg = null;
 	private void drawGrid(Grid grid) {
 		Iterator<Actor> iter = null;
 		for (GridBox gridBox : grid.getGrid()) {
@@ -303,7 +350,7 @@ public class GameScreen implements Screen {
 						@Override
 						public boolean touchDown(InputEvent event, float x, float y,
 								int pointer, int button) {
-							//TODO
+							hasDragged = false;
 							return true;
 						}
 
@@ -315,33 +362,39 @@ public class GameScreen implements Screen {
 
 							// if player has not selected any other tile before this
 							// make this image ID the first swap image ID
-							if (firstSwapID == -1) {
-								//								img.addAction(
-								//										scaleTo(20f, 20f, .1f)
-								//										);
+							if (firstSwapID == -1 && !hasDragged) {
+								img.addAction(
+										alpha (.3f, .2f)
+										);
 								firstSwapID = touchID;
 								Gdx.app.log("Swap 1", "Selected image ID " + firstSwapID);
+								hasDragged = false;
+								firstSwapImg = img;
 							}
 
 							// if player has selected the same image that was selected as the first swap,
 							// reset the first swap image
 							else if (firstSwapID == touchID) {
-								//								img.addAction(
-								//										scaleTo(-.5f, -.5f, .1f)
-								//										);
+								img.addAction(
+										alpha (1f, .2f)
+										);
 								Gdx.app.log("Swap 1", "Deselected image ID " + firstSwapID);
 								firstSwapID = -1;
+								firstSwapImg = null;
 							}
 
 							// if the first swap image has already been selected, then set this image
 							// to be the second swap and change their previous IDs accordingly
-							else {
+							else if (firstSwapID != -1) {
 								secondSwapID = touchID;
+
+								// remove effect for the first swap image
+								firstSwapImg.addAction(
+										alpha (1f, .2f)
+										);
+								hasSwapped = true;
+
 								Gdx.app.log("Swap 2", "Swap " + firstSwapID + " with " + secondSwapID);
-
-
-								firstSwapID = -1;
-								secondSwapID = -1;
 							}
 
 

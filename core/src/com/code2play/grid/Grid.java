@@ -21,17 +21,17 @@ public class Grid {
 
 	/* State of the game */
 	private GameMain game;
-	
+
 	/* Number of maximum moves allowed before gameover */
 	private int numMovesLeft;			
-	
+
 	/* Time in millisec in this level before gameover. 
 	 * Set as negative for infinite */
 	private float maxLevelTime;
-	
+
 	/* Starting number of swaps in this level */
 	private int numSwapsLeft;
-	
+
 	/* all the gridboxes in this grid */
 	private List<GridBox> grid;
 	private int width;
@@ -43,7 +43,7 @@ public class Grid {
 	private Array<Group> colorGroups;
 	private static final int MIN_CHAIN_SIZE = 3;
 	private int numMinChainGroup;
-	
+
 	/******************************************************************************************/
 	/************************************ INIT METHODS **************************************/
 
@@ -70,12 +70,12 @@ public class Grid {
 		}
 		colorGroups = new Array<Group>();
 	}
-	
+
 	private Grid(GameMain g) {
 		game = g;
 		random = new Random();
 	}
-	
+
 	/**
 	 * Loads a level file with information about grid size,
 	 * spawn colored tiles, starting time, starting swaps, and
@@ -90,12 +90,12 @@ public class Grid {
 		g.numMovesLeft = 0;
 		g.maxLevelTime = 0f;
 		g.numSwapsLeft = 0;
-		
+
 		// read the file and split the string into extractable content
 		// initialize grid properties
 		String content = file.readString();
 		String[] lines = content.split("\n");
-		String[] gridInfo = new String[]{};
+//		String[] gridInfo = new String[]{};
 		int lineNum = 0;
 		int totalNumBox = 0;
 		for (int i = 0; i < lines.length; i++) {
@@ -103,7 +103,7 @@ public class Grid {
 				continue;
 			else {
 				String[] tokens = lines[i].split(",");
-				
+
 				// first line is grid details
 				if (lineNum == 0) {
 					width = Integer.parseInt(tokens[0]);
@@ -111,7 +111,7 @@ public class Grid {
 					g.numMovesLeft = Integer.parseInt(tokens[2]);
 					g.maxLevelTime = Float.parseFloat(tokens[3]);
 					g.numSwapsLeft = Integer.parseInt(tokens[4]);
-					
+
 					// initialize grid data structure
 					// with dimensions
 					System.out.println("Initializing grid with dimension " + 
@@ -128,10 +128,10 @@ public class Grid {
 						g.grid.add(box);
 					}
 					g.colorGroups = new Array<Group>();
-					
+
 					lineNum++;
 				}
-				
+
 				// second line is grid tile info
 				else if (lineNum == 1) {
 					for (int j = 0; j < totalNumBox; j++) {
@@ -148,21 +148,21 @@ public class Grid {
 							color = Color.YELLOW;
 						else if (tokens[j].equals("?"))
 							color = g.getRandomColor();
-						
+
 						g.spawnGridBoxAt(j+1, color);
 					} 
 				}
 			}
 		}
-		
+
 		// spawn colored tiles from file
-//		g.spawnGridBoxAt(1, Color.GREEN);
-//		for (int i = 0; i < 12; i++) 
-//			g.spawnRandomGridBox();
-		
+		//		g.spawnGridBoxAt(1, Color.GREEN);
+		//		for (int i = 0; i < 12; i++) 
+		//			g.spawnRandomGridBox();
+
 		return g;
 	}
-	
+
 	/******************************************************************************************/
 	/************************************ GETTER METHODS **************************************/
 
@@ -181,7 +181,7 @@ public class Grid {
 	public int getSize() {
 		return grid.size();
 	}
-	
+
 	/**
 	 * Returns the number of possible moves (eg. swipe, swap) allowed left
 	 * in this level
@@ -190,16 +190,16 @@ public class Grid {
 	public int getMovesLeft() {
 		return numMovesLeft;
 	}
-	
+
 	public float getTimeLeft() {
 		return maxLevelTime;
 	}
-	
+
 	public int getNumSwapsLeft() {
 		return numSwapsLeft;
 	}
 
-	
+
 	/**
 	 * Returns the number of same-color gridbox groups with number of members 
 	 * greater than or equal to MIN_CHAIN_SIZE found 
@@ -218,7 +218,7 @@ public class Grid {
 	private int getRandomInt(int min, int max) {
 		return random.nextInt(max-min) + min;
 	}
-	
+
 	/**
 	 * Returns non-diagonal neighboring gridboxes
 	 * @param g
@@ -251,21 +251,21 @@ public class Grid {
 
 		return neighbors;
 	}
-	
+
 	/******************************************************************************************/
 	/************************************ UPDATE METHODS **************************************/
 
 	boolean firstMove = true;
 	boolean done = false;
 	/**
-	 * Updates all instances of gridboxes and logic in the grid
+	 * Updates all instances of gridboxes and logic in the grid form swipe direction
 	 * @param deltaTime
 	 */
 	public void update(float deltaTime, Swipe direction) {
 		// clear from last rendered frame
 		// TODO SWIPE TO BEGIN LEVEL
-//		if (!firstMove) move(direction);
-//		firstMove = false;
+		//		if (!firstMove) move(direction);
+		//		firstMove = false;
 		move(direction);
 
 		// update all group of color matches
@@ -286,7 +286,42 @@ public class Grid {
 		//					done = true;
 		//				}
 	}
-	
+
+	/**
+	 * Updates gridboxes that are swapped
+	 * @param deltaTime
+	 * @param firstSwapID
+	 * @param secondSwapID
+	 */
+	public void update(float deltaTime, int firstSwapID, int secondSwapID) {
+		swap(firstSwapID, secondSwapID);
+
+		// spawn new gridbox
+		if (game.getGameMode() == GameMode.CLASSIC)	
+			spawnRandomGridBox();
+	}
+
+	/**
+	 * Swaps two specified IDs in the grid
+	 * @param firstSwapID
+	 * @param secondSwapID
+	 */
+	private void swap(int firstSwapID, int secondSwapID) {
+		GridBox first = grid.get(firstSwapID-1);
+		GridBox second = grid.get(secondSwapID-1);
+
+		if (first.isEmpty() || second.isEmpty()) 
+			return;
+		else {
+			// move first box to second
+			Color secondColor = second.getColor();
+			second.setColor(first.getColor());
+			second.setPrevId(first.getId());
+			first.setColor(secondColor);
+			first.setPrevId(second.getId());
+		}
+	}
+
 	/**
 	 * Call this method to decrement the move counts from the maximum
 	 * possible moves allowed in a level
@@ -339,7 +374,7 @@ public class Grid {
 		System.out.println("Spawned " + (id-1) + " color " + color + " ");
 		return box;
 	}
-	
+
 	/**
 	 * Moves all the spawned boxes in a direction specified
 	 * TODO check all gridboxes whose group has size >= MIN_CHAIN_SIZE 
@@ -347,8 +382,6 @@ public class Grid {
 	 * @param direction
 	 */
 	public void move(Swipe direction) {
-		
-		//TODO handle swap logic here
 
 		switch(direction) {
 		case DOWN:
@@ -616,7 +649,7 @@ public class Grid {
 		}
 		return colorGroups;
 	}
-	
+
 	/**************************************************************************************************/
 	/*************************************** AUXILIARY METHODS ****************************************/
 
