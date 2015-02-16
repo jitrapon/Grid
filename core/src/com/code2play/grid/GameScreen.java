@@ -30,7 +30,15 @@ import com.code2play.grid.GridBox.Color;
 public class GameScreen implements Screen {
 
 	// Grid constants
-	private Stage stage;
+	/** Game stage: contains all game elements onscreen **/
+	private Stage gameStage;
+	
+	/** Input multiplexer for game stage **/
+	private InputMultiplexer inMultiplexer;
+	
+	/** HUD stage: contains all control elements of the HUD onscreen **/
+	private Stage hudStage;
+	
 	private OrthographicCamera camera;
 	public static final int width = 720;
 	public static final int height = 1280;
@@ -103,30 +111,30 @@ public class GameScreen implements Screen {
 		grid = game.getGrid();
 		camera = new OrthographicCamera();
 		//		camera.setToOrtho(true);
-		stage = new Stage( new ExtendViewport(width, height, maxWidth, maxHeight, camera) );
+		gameStage = new Stage( new ExtendViewport(width, height, maxWidth, maxHeight, camera) );
 		gridCoordinates = new HashMap<Integer, Vector2>();
 		firstSwapID = -1;
 		secondSwapID = -1;
 
 		// create all groups to hold the actors
 		backgroundGroup = new Group();
-		backgroundGroup.setBounds(0, 0, stage.getWidth(), stage.getHeight());
+		backgroundGroup.setBounds(0, 0, gameStage.getWidth(), gameStage.getHeight());
 		gridGroup = new Group();
-		gridGroup.setBounds(0, 0, stage.getWidth(), stage.getHeight());
+		gridGroup.setBounds(0, 0, gameStage.getWidth(), gameStage.getHeight());
 
 		// create all actors
 		Image backgroundImg = new Image( Assets.getBackground() );
-		backgroundImg.setSize(stage.getWidth(), stage.getHeight());
+		backgroundImg.setSize(gameStage.getWidth(), gameStage.getHeight());
 		backgroundGroup.addActor(backgroundImg);
 
 		// create blank grids and initializes their positions
 		createGridFromMargins(0.05f, 0.25f, 20f, 20f);
 
-		// add all group to the stage
-		stage.addActor(backgroundGroup);
-		stage.addActor(gridGroup);
+		// add all group to the gameStage
+		gameStage.addActor(backgroundGroup);
+		gameStage.addActor(gridGroup);
 
-		// set stage inputlistener
+		// set gameStage inputlistener
 		DragListener listener = new DragListener() {
 			private float startDragX;
 			private float startDragY;
@@ -190,25 +198,25 @@ public class GameScreen implements Screen {
 			}
 		};
 		listener.setTapSquareSize(10);	// TODO change this to percentage of screen size
-		stage.addListener(listener);
+		gameStage.addListener(listener);
 
 		// set input processor 
-		InputMultiplexer inMultiplexer = new InputMultiplexer();
+		inMultiplexer = new InputMultiplexer();
 
-		inMultiplexer.addProcessor(stage);
+		inMultiplexer.addProcessor(gameStage);
 		Gdx.input.setInputProcessor(inMultiplexer);
 	}
 
 	public void createGridFromMargins(float percentWidth, float percentHeight, 
 			float widthSpacing, float heightSpacing) {
-		float widthMargin = percentWidth*stage.getWidth();
-		float heightMargin  = (percentHeight) *stage.getHeight();
-		float startingHeight = stage.getHeight() - heightMargin;
+		float widthMargin = percentWidth*gameStage.getWidth();
+		float heightMargin  = (percentHeight) *gameStage.getHeight();
+		float startingHeight = gameStage.getHeight() - heightMargin;
 
 		// calculate each invididual box's width and height
-		boxWidth = ((stage.getWidth() - widthMargin*2f) - 
+		boxWidth = ((gameStage.getWidth() - widthMargin*2f) - 
 				( widthSpacing * (grid.getWidth()+1) )) / grid.getWidth();
-		boxHeight = ((stage.getHeight() - heightMargin*2f) - 
+		boxHeight = ((gameStage.getHeight() - heightMargin*2f) - 
 				( heightSpacing * (grid.getHeight()+1) )) / grid.getHeight();
 
 		// lay out each box onto the grid layout, while calculating a new x,y coordinates for each box
@@ -266,11 +274,18 @@ public class GameScreen implements Screen {
 				int movesLeft = grid.getMovesLeft();
 				if (prevMovesLeft != movesLeft) {
 					prevMovesLeft = movesLeft;
-					System.out.println("Moves left: " + grid.getMovesLeft());
+					System.out.println("Moves left: " + movesLeft);
+
+					// if no more move is allowed, we set the game state to be GAMEOVER
+					// and render things accordingly
+					if (movesLeft == 0) {
+						game.actionResolver.showLongToast("No more move left. Game is over!");
+						game.setGameState(GameState.GAMEOVER);
+					}
 				}
 			}
 
-			// check input
+			// process input
 			//TODO double elimination case
 			if ((swipeDir != null || grid.getNumColorGroups() > 0 || hasSwapped) 
 
@@ -283,8 +298,8 @@ public class GameScreen implements Screen {
 					if (grid.getNumColorGroups() > 0 && prevSwipeDir != null) 
 						grid.update(delta, prevSwipeDir);
 					else if (swipeDir != null){
-						grid.update(delta, swipeDir);
-						grid.updateMoveCount();
+						if (grid.update(delta, swipeDir))
+							grid.updateMoveCount();
 					}
 
 					// we add slight delay for the animation of claring gridboxes to proceed
@@ -306,26 +321,23 @@ public class GameScreen implements Screen {
 				}
 
 				// process moves to be rendered
-				// and set necessary actions for stage to draw
+				// and set necessary actions for gameStage to draw
 				drawGrid(grid);
 
 				// reset values
 				swipeDir = null;
 				hasSwapped = false;
 
-//				System.out.println(grid.getGrid());
+				//				System.out.println(grid.getGrid());
 				deltaTime = 0f;
 			}
 
-			// update
-			stage.act(delta);
-
-			// draw
-			stage.draw();
+			// update the gameStage and draw accordingly
+			gameStage.act(delta);
+			gameStage.draw();
 
 			// update time
 			deltaTime += delta;
-
 
 			break;
 
@@ -339,14 +351,30 @@ public class GameScreen implements Screen {
 
 		case GAMEOVER:
 
+			// clear screen
+			Gdx.gl.glClearColor(0, 0, 0, 1);
+			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+			// update the gameStage and draw accordingly
+			// remove input processor 
+			if (inMultiplexer.getProcessors().contains(gameStage, false))
+				inMultiplexer.removeProcessor(gameStage);
+			gameStage.act(delta);
+			gameStage.draw();
+
 			break;
 
 		default:
 
 			break;
 		}
-
-
+	}
+	
+	/**
+	 * Removes all colored gridboxes
+	 */
+	private void removeAllGrid() {
+		
 	}
 
 	/**
@@ -436,7 +464,7 @@ public class GameScreen implements Screen {
 				// recently moved
 				else {
 
-					// get stage actor under gridGroup of userobjecttype with id = move.originId and 
+					// get gameStage actor under gridGroup of userobjecttype with id = move.originId and 
 					// update it to move.destId
 					// add move transition animation
 					// cannot call removeActor while iterating
@@ -447,7 +475,7 @@ public class GameScreen implements Screen {
 						if (temp != null) {
 							if ( temp.getId() == gridBox.getPrevId()  
 									&& temp.getColor() == gridBox.getColor()
-//									&& temp.getPrevId() != REMOVED 
+									//									&& temp.getPrevId() != REMOVED 
 									) {
 								Vector2 pos = gridCoordinates.get(gridBox.getId()-1);
 								gridBoxImg.addAction(
@@ -493,16 +521,16 @@ public class GameScreen implements Screen {
 										scaleTo(0, 0, .08f, Interpolation.linear),
 										moveTo(gridBoxImg.getX() + boxHeight/2, gridBoxImg.getY() + boxWidth/2, 
 												.08f, Interpolation.linear)
-								));
+										));
 						temp.removed = true;
-//						Gdx.app.log("ADD ACTION", "GRID ID " + temp.getId() + " ADDED ACTION! (" 
-//								+ gridBoxClearAnimTime + ")");
+						//						Gdx.app.log("ADD ACTION", "GRID ID " + temp.getId() + " ADDED ACTION! (" 
+						//								+ gridBoxClearAnimTime + ")");
 					}
 
 					// else if action is completed, remove it from list to be rendered
 					else {
 						if (gridBoxImg.getActions().size == 0) {
-//							Gdx.app.log("REMOVE", "GRID ID " + temp.getId() + " REMOVED!");
+							//							Gdx.app.log("REMOVE", "GRID ID " + temp.getId() + " REMOVED!");
 							iter.remove();
 						}
 					}
@@ -513,7 +541,7 @@ public class GameScreen implements Screen {
 	@Override
 	public void resize(int width, int height) {
 		System.out.println("Resizing screen to " + width + " and " + height);
-		stage.getViewport().update(width, height, true);
+		gameStage.getViewport().update(width, height, true);
 	}
 
 	@Override
@@ -537,7 +565,7 @@ public class GameScreen implements Screen {
 	@Override
 	// never called automatically
 	public void dispose() {
-		stage.dispose();
+		gameStage.dispose();
 		//		skin.dispose();
 	}
 

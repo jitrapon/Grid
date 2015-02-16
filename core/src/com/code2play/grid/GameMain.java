@@ -8,9 +8,13 @@ public class GameMain extends Game {
 	/** All the screens **/
 	GameScreen gameScreen; 
 	
-	/** Game states **/
+	/** Game grid instance **/
 	private Grid grid;
+	
+	/** Game modes **/
 	private GameMode gameMode;
+	
+	/** Game states **/
 	private GameState gameState;
 	
 	/** Game state constants **/
@@ -18,7 +22,7 @@ public class GameMain extends Game {
 	private static final int DEFAULT_GRID_HEIGHT = 4;
 	
 	/* Android UI element interface */
-	ActionResolver actionResolver;
+	public ActionResolver actionResolver;
 	
 	/**
 	 * Ctor for Android application

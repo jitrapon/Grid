@@ -13,8 +13,16 @@ Game Mode:
     
     Player is given number of tools to help win the round.
     Tools available:
-      1. Undo (num) - will undo game state back 1 step backward per 1 usage
-      2. Switch* (num)
-      3. Activator* (num)
+      1. Undo [top-right 2] (num) - will undo game state back 1 step backward per 1 usage
+      2. Swap* [top-mid-right] (num)
+      3. Special* [bottom-mid] (num)
+      4. Restart [top-right 1]
+      5. MoveLeft [top-mid] (num)
+      6. Game option [top-left] (equivalent to Android's Back) 
+      	Triggers PAUSE mode
+      	- Tutorial
+      	- Settings
+      	- Exit to MainMenu Screen
+      7. Time [above MoveLeft]
       
       *Usage of this tool counts toward number of move left.

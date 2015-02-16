@@ -21,6 +21,18 @@ public class Grid {
 
 	/* State of the game */
 	private GameMain game;
+	
+	/** Initial game state (from level load in CHALLENGE MODE) **/
+	private List<GridBox> defaultGrid;
+	
+	/** Initial numMovesLeft **/
+	private int defaultMovesLeft;
+	
+	/** Iniitial maxLevelTime **/
+	private float defaultLevelTime;
+	
+	/** Initial swaps left **/
+	private int defaultSwapsLeft;
 
 	/* Number of maximum moves allowed before gameover */
 	private int numMovesLeft;			
@@ -85,8 +97,6 @@ public class Grid {
 	 */
 	public static Grid load(GameMain game, FileHandle file) {
 		Grid g = new Grid(game);
-		int width = 0;
-		int height = 0;
 		g.numMovesLeft = 0;
 		g.maxLevelTime = 0f;
 		g.numSwapsLeft = 0;
@@ -95,7 +105,7 @@ public class Grid {
 		// initialize grid properties
 		String content = file.readString();
 		String[] lines = content.split("\n");
-//		String[] gridInfo = new String[]{};
+		//		String[] gridInfo = new String[]{};
 		int lineNum = 0;
 		int totalNumBox = 0;
 		for (int i = 0; i < lines.length; i++) {
@@ -106,8 +116,8 @@ public class Grid {
 
 				// first line is grid details
 				if (lineNum == 0) {
-					width = Integer.parseInt(tokens[0]);
-					height = Integer.parseInt(tokens[1]);
+					g.width = Integer.parseInt(tokens[0]);
+					g.height = Integer.parseInt(tokens[1]);
 					g.numMovesLeft = Integer.parseInt(tokens[2]);
 					g.maxLevelTime = Float.parseFloat(tokens[3]);
 					g.numSwapsLeft = Integer.parseInt(tokens[4]);
@@ -115,10 +125,8 @@ public class Grid {
 					// initialize grid data structure
 					// with dimensions
 					System.out.println("Initializing grid with dimension " + 
-							width + "x" + height);
-					totalNumBox = width*height;
-					g.width = width;
-					g.height = height;
+							g.width + "x" + g.height);
+					totalNumBox = g.width*g.height;
 					int currId = 1;
 					g.grid = new ArrayList<GridBox>(totalNumBox);
 
@@ -159,8 +167,29 @@ public class Grid {
 		//		g.spawnGridBoxAt(1, Color.GREEN);
 		//		for (int i = 0; i < 12; i++) 
 		//			g.spawnRandomGridBox();
-
+		
+		// clone all the grid objects to save this default state
+		g.defaultGrid = new ArrayList<GridBox>(g.width*g.height);
+		for (GridBox gridBox : g.grid) {
+			GridBox temp = new GridBox(gridBox.getId(), gridBox.getColor());
+			temp.setPrevId(gridBox.getPrevId());
+			g.defaultGrid.add(temp);
+		}
+		g.defaultMovesLeft = g.numMovesLeft;
+		g.defaultLevelTime = g.maxLevelTime;
+		g.defaultSwapsLeft = g.numSwapsLeft;
 		return g;
+	}
+	
+	/**
+	 * Restores the default state of this level
+	 * TODO load from cache
+	 * @return
+	 */
+	public boolean restoreDefaultState() {
+		
+		
+		return true;
 	}
 
 	/******************************************************************************************/
@@ -260,13 +289,14 @@ public class Grid {
 	/**
 	 * Updates all instances of gridboxes and logic in the grid form swipe direction
 	 * @param deltaTime
+	 * @return True if any change in the grid occurs
 	 */
-	public void update(float deltaTime, Swipe direction) {
+	public boolean update(float deltaTime, Swipe direction) {
 		// clear from last rendered frame
 		// TODO SWIPE TO BEGIN LEVEL
 		//		if (!firstMove) move(direction);
 		//		firstMove = false;
-		move(direction);
+		boolean hasMoved = move(direction);
 
 		// update all group of color matches
 		updateColorMatchCounts();
@@ -285,6 +315,7 @@ public class Grid {
 		//					spawnGridBoxAt(13, Color.RED);
 		//					done = true;
 		//				}
+		return hasMoved;
 	}
 
 	/**
@@ -381,33 +412,30 @@ public class Grid {
 	 * set their color to NONE (empty)
 	 * @param direction
 	 */
-	public void move(Swipe direction) {
+	public boolean move(Swipe direction) {
 
 		switch(direction) {
 		case DOWN:
-			moveDown();
-			break;
+			return moveDown();
 		case LEFT:
-			moveLeft();
-			break;
+			return moveLeft();
 		case RIGHT:
-			moveRight();
-			break;
+			return moveRight();
 		case UP:
-			moveUp();
-			break;
+			return moveUp();
 		default:
-			break;
+			return false;
 		}
 	}
 
 	/**
 	 * Move all boxes leftward
 	 */
-	private void moveLeft() {
+	private boolean moveLeft() {
 		// iterate through all colored boxes, starting at 
 		// the second top row
 		//		int secondTopLeftIndex = 1;
+		boolean hasMoved = false;
 		int secondTopLeftIndex = 0;
 		GridBox toMove = null;
 		GridBox destination = null;
@@ -422,6 +450,7 @@ public class Grid {
 					toMove.setColor(Color.REMOVED);
 					toMove.setPrevId(-3);
 					numBoxSpawned--;
+					hasMoved = true;
 					continue;
 				}
 			}
@@ -439,21 +468,23 @@ public class Grid {
 						destination.setPrevId( toMove.getId() );
 						destination.setColor( toMove.getColor() );
 						toMove.clearColor();
+						hasMoved = true;
 						break;
 					}
 				}
 			}
-
 		}
+		return hasMoved;
 	}
 
 	/**
 	 * Move all boxes rightward
 	 */
-	private void moveRight() {
+	private boolean moveRight() {
 		// iterate through all colored boxes, starting at 
 		// the second rightmost bottom row
 		//		int secondRightBottomIndex = width*height - 2;
+		boolean hasMoved = false;
 		int secondRightBottomIndex = width*height - 1;
 		GridBox toMove = null;
 		GridBox destination = null;
@@ -469,6 +500,7 @@ public class Grid {
 					toMove.setColor(Color.REMOVED);
 					toMove.setPrevId(-3);
 					numBoxSpawned--;
+					hasMoved = true;
 					continue;
 				}
 			}
@@ -484,6 +516,7 @@ public class Grid {
 					if (destination.isEmpty()
 							|| destination.getColor() == Color.REMOVED
 							) {
+						hasMoved = true;
 						destination.setPrevId( toMove.getId() );
 						destination.setColor( toMove.getColor() );
 						toMove.clearColor();
@@ -493,15 +526,17 @@ public class Grid {
 
 			}
 		}
+		return hasMoved;
 	}
 
 	/**
 	 * Move all boxes downward
 	 */
-	private void moveDown() {
+	private boolean moveDown() {
 		// iterate through all colored boxes, starting at 
 		// the second most bottom row
 		//		int secondLastRowIndex = width*(height-1) - 1;
+		boolean hasMoved = false;
 		int secondLastRowIndex = width*height - 1;
 		GridBox toMove = null;
 		GridBox destination = null;
@@ -514,6 +549,7 @@ public class Grid {
 					toMove.setColor(Color.REMOVED);
 					toMove.setPrevId(-3);
 					numBoxSpawned--;
+					hasMoved = true;
 					continue;
 				}
 			}
@@ -531,21 +567,24 @@ public class Grid {
 						destination.setPrevId( toMove.getId() );
 						destination.setColor( toMove.getColor() );
 						toMove.clearColor();
+						hasMoved = true;
 						break;
 					}
 				}
 			}
 
 		}
+		return hasMoved;
 	}
 
 	/**
 	 * Move all boxes upward
 	 */
-	private void moveUp() {
+	private boolean moveUp() {
 		// iterate through all colored boxes, starting at
 		// the second most top row
 		//		int secondTopRowIndex = width;
+		boolean hasMoved = false;
 		int secondTopRowIndex = 0;
 		GridBox toMove = null;
 		GridBox destination = null;
@@ -558,6 +597,7 @@ public class Grid {
 					toMove.setColor(Color.REMOVED);
 					toMove.setPrevId(-3);
 					numBoxSpawned--;
+					hasMoved = true;
 					continue;
 				}
 			}
@@ -575,12 +615,14 @@ public class Grid {
 						destination.setPrevId( toMove.getId() );
 						destination.setColor( toMove.getColor() );
 						toMove.clearColor();
+						hasMoved = true;
 						break;
 					}
 				}
 			}
 
 		}
+		return hasMoved;
 	}
 
 	/**

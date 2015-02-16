@@ -43,7 +43,7 @@ public class Assets {
 	 */
 	private static void loadTextures() {
 		// load background
-		background = new Texture(Gdx.files.internal("textures/background.png"));
+		background = new Texture(Gdx.files.internal("textures/background_temp.png"));
 		
 		// load grid stuff
 		blank = atlas.findRegion(BLANK);
