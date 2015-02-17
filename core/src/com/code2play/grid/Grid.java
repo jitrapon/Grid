@@ -183,11 +183,21 @@ public class Grid {
 	
 	/**
 	 * Restores the default state of this level
+	 * This method is to be called when the player reloads the state of the default level
+	 * in the CHALLENGE mode
 	 * TODO load from cache
 	 * @return
 	 */
 	public boolean restoreDefaultState() {
-		
+		grid.clear();
+		for (GridBox gridBox : defaultGrid) {
+			GridBox temp = new GridBox(gridBox.getId(), gridBox.getColor());
+			temp.setPrevId(gridBox.getPrevId());
+			grid.add(temp);
+		}
+		numMovesLeft = defaultMovesLeft;
+		maxLevelTime = defaultLevelTime;
+		numSwapsLeft = defaultSwapsLeft;
 		
 		return true;
 	}

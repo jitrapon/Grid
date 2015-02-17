@@ -1,9 +1,10 @@
 package com.code2play.grid;
 
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.alpha;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.moveTo;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.parallel;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.scaleTo;
-import static com.badlogic.gdx.scenes.scene2d.actions.Actions.alpha;
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.rotateBy;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -21,9 +22,14 @@ import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Button;
+import com.badlogic.gdx.scenes.scene2d.ui.Button.ButtonStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener.ChangeEvent;
 import com.badlogic.gdx.scenes.scene2d.utils.DragListener;
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.code2play.grid.GridBox.Color;
 
@@ -32,13 +38,13 @@ public class GameScreen implements Screen {
 	// Grid constants
 	/** Game stage: contains all game elements onscreen **/
 	private Stage gameStage;
-	
+
 	/** Input multiplexer for game stage **/
 	private InputMultiplexer inMultiplexer;
-	
+
 	/** HUD stage: contains all control elements of the HUD onscreen **/
 	private Stage hudStage;
-	
+
 	private OrthographicCamera camera;
 	public static final int width = 720;
 	public static final int height = 1280;
@@ -94,6 +100,14 @@ public class GameScreen implements Screen {
 	 */
 	private static float DRAG_MIN_THRESHOLD = 50f;
 
+	/**
+	 * UI-reset button
+	 */
+	private Button resetBtn;
+	
+	/** Force render once **/
+	private boolean forceRender = true;
+
 
 	/** All the swipe directions for easy reference **/
 	enum Swipe {
@@ -105,12 +119,67 @@ public class GameScreen implements Screen {
 	 * @param g
 	 */
 	public GameScreen(GameMain g) {
-
 		// game instance is the same one as the first created
 		game = g;
 		grid = game.getGrid();
 		camera = new OrthographicCamera();
 		//		camera.setToOrtho(true);
+		inMultiplexer = new InputMultiplexer();
+		initHUDStage();
+		initGameStage();
+
+		Gdx.input.setInputProcessor(inMultiplexer);
+	}
+
+	/**
+	 * Initialize the HUD stage
+	 */
+	private void initHUDStage() {
+		// create a new HUD stage to hold for buttons
+		hudStage = new Stage( new ExtendViewport(width, height, maxWidth, maxHeight, camera) );
+
+		// initialize RESET button
+		skin = new Skin();
+		ButtonStyle resetBtnStyle = new ButtonStyle();
+		Drawable resetBtnDrawable = new Image(Assets.getResetBtn()).getDrawable();
+		resetBtnStyle.up = resetBtnDrawable;
+		resetBtnStyle.down = resetBtnDrawable;
+		resetBtn = new Button(resetBtnStyle);
+		resetBtn.setOrigin(resetBtn.getWidth()/2, resetBtn.getHeight()/2);
+		resetBtn.setBounds(hudStage.getWidth()-120, hudStage.getHeight()-120, resetBtn.getWidth()*.8f, 
+				resetBtn.getHeight()*.8f);
+		resetBtn.addListener(new InputListener() {
+			public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				return true;
+			}
+
+			// scene2d ui elements cannot be rotated
+			public void touchUp (InputEvent event, float x, float y, int pointer, int button) {
+				restartLevel();
+			}
+		});
+		hudStage.addActor(resetBtn);
+
+
+		inMultiplexer.addProcessor(hudStage);
+	}
+	
+	/**
+	 * Reset all the UIs and grid boxes to initial loaded level
+	 */
+	private void restartLevel() {
+		if (game.getGameMode() == GameMode.CHALLENGE) {
+			removeAllColoredGridBoxes();
+			grid.restoreDefaultState();
+			forceRender = true;
+			game.actionResolver.showShortToast("Restarted level");
+		}
+	}
+
+	/**
+	 * Initialize the Game stage
+	 */
+	private void initGameStage() {
 		gameStage = new Stage( new ExtendViewport(width, height, maxWidth, maxHeight, camera) );
 		gridCoordinates = new HashMap<Integer, Vector2>();
 		firstSwapID = -1;
@@ -201,11 +270,9 @@ public class GameScreen implements Screen {
 		gameStage.addListener(listener);
 
 		// set input processor 
-		inMultiplexer = new InputMultiplexer();
-
 		inMultiplexer.addProcessor(gameStage);
-		Gdx.input.setInputProcessor(inMultiplexer);
 	}
+
 
 	public void createGridFromMargins(float percentWidth, float percentHeight, 
 			float widthSpacing, float heightSpacing) {
@@ -239,7 +306,6 @@ public class GameScreen implements Screen {
 		}
 	}
 
-	boolean firstMove = true;
 	float deltaTime = 0f;
 	Swipe prevSwipeDir = null;
 	int prevMovesLeft = -1;
@@ -259,9 +325,9 @@ public class GameScreen implements Screen {
 			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
 			// render grid for the first time
-			if (firstMove) {
+			if (forceRender) {
 				drawGrid(grid);
-				firstMove = false;
+				forceRender = false;
 			}
 
 			//TODO challenge mode
@@ -336,6 +402,10 @@ public class GameScreen implements Screen {
 			gameStage.act(delta);
 			gameStage.draw();
 
+			// update and draw the HUD
+			hudStage.act(delta);
+			hudStage.draw();
+
 			// update time
 			deltaTime += delta;
 
@@ -357,9 +427,16 @@ public class GameScreen implements Screen {
 
 			// update the gameStage and draw accordingly
 			// remove input processor 
-			if (inMultiplexer.getProcessors().contains(gameStage, false))
+			if (inMultiplexer.getProcessors().contains(gameStage, false)) 
 				inMultiplexer.removeProcessor(gameStage);
+			
+			if (inMultiplexer.getProcessors().contains(hudStage, false)) 
+				inMultiplexer.removeProcessor(hudStage);
+			
 			gameStage.act(delta);
+			gameStage.draw();
+			
+			hudStage.act(delta);
 			gameStage.draw();
 
 			break;
@@ -369,12 +446,19 @@ public class GameScreen implements Screen {
 			break;
 		}
 	}
-	
+
 	/**
-	 * Removes all colored gridboxes
+	 * Removes all colored grid boxes onscreen
 	 */
-	private void removeAllGrid() {
-		
+	private void removeAllColoredGridBoxes() {
+		Iterator<Actor> iter = gridGroup.getChildren().iterator();
+		while (iter.hasNext()) {
+			Actor gridBoxImg = iter.next();
+			GridBox temp = (GridBox) gridBoxImg.getUserObject();
+			if (temp != null) {
+				iter.remove();
+			}
+		}
 	}
 
 	/**
@@ -566,7 +650,7 @@ public class GameScreen implements Screen {
 	// never called automatically
 	public void dispose() {
 		gameStage.dispose();
-		//		skin.dispose();
+		skin.dispose();
 	}
 
 }
