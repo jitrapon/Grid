@@ -51,7 +51,7 @@ public class GameMain extends Game {
 		if (gameMode == GameMode.CLASSIC)
 			grid = new Grid(this, DEFAULT_GRID_WIDTH, DEFAULT_GRID_HEIGHT);			// normal mode
 		else if (gameMode == GameMode.CHALLENGE)
-			grid = Grid.load(this, Gdx.files.internal("levels/1.lvl"));				// challenge mode
+			grid = Grid.load(this, Gdx.files.internal("levels/2.lvl"));				// challenge mode
 		
 		// set screen TODO mainmenu screen, puzzle choosing screen
 		//TODO done in puzzle choosing screen

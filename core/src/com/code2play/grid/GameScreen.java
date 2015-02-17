@@ -363,7 +363,7 @@ public class GameScreen implements Screen {
 				if (!hasSwapped) {
 					if (grid.getNumColorGroups() > 0 && prevSwipeDir != null) 
 						grid.update(delta, prevSwipeDir);
-					else if (swipeDir != null){
+					else if (swipeDir != null) {
 						if (grid.update(delta, swipeDir))
 							grid.updateMoveCount();
 					}
@@ -375,7 +375,7 @@ public class GameScreen implements Screen {
 					else
 						gridBoxClearAnimTime = 0f;
 
-					prevSwipeDir = swipeDir == null ? null : swipeDir;
+					prevSwipeDir = swipeDir == null ? prevSwipeDir : swipeDir;
 				}
 
 				// update gridbox - swap
