@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Array;
 import com.code2play.grid.GameScreen.Swipe;
@@ -40,6 +39,9 @@ public class Grid {
 
 	/** Initial swaps left **/
 	private int defaultSwapsLeft;
+	
+	/** Initial number of spawned colored boxes **/
+	private int defaultNumSpawned;
 
 	/* Number of maximum moves allowed before gameover */
 	private int numMovesLeft;			
@@ -53,7 +55,7 @@ public class Grid {
 	/* Time in millisec in this level before gameover. 
 	 * Set as negative for infinite */
 	private float maxLevelTime;
-
+	
 	/* Starting number of swaps in this level */
 	private int numSwapsLeft;
 
@@ -69,7 +71,6 @@ public class Grid {
 	private static final int MIN_CHAIN_SIZE = 3;
 	private int numMinChainGroup;
 	
-	private int prevMovesLeft;
 	
 
 	/******************************************************************************************/
@@ -198,6 +199,7 @@ public class Grid {
 		g.defaultMinSilverMovesLeft = g.minSilverMovesLeft;
 		g.defaultLevelTime = g.maxLevelTime;
 		g.defaultSwapsLeft = g.numSwapsLeft;
+		g.defaultNumSpawned = g.numBoxSpawned;
 		return g;
 	}
 
@@ -220,6 +222,7 @@ public class Grid {
 		minSilverMovesLeft = defaultMinSilverMovesLeft;
 		maxLevelTime = defaultLevelTime;
 		numSwapsLeft = defaultSwapsLeft;
+		numBoxSpawned = defaultNumSpawned;
 
 		return true;
 	}
