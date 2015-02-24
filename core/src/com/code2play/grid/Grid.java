@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Array;
 import com.code2play.grid.GameScreen.Swipe;
@@ -21,21 +22,33 @@ public class Grid {
 
 	/* State of the game */
 	private GameMain game;
-	
+
 	/** Initial game state (from level load in CHALLENGE MODE) **/
 	private List<GridBox> defaultGrid;
-	
+
 	/** Initial numMovesLeft **/
 	private int defaultMovesLeft;
-	
+
+	/** Initial minimum moveleft to have to receive Gold reward */
+	private int defaultMinGoldMovesLeft;
+
+	/** Initial minimum moveleft to have to receive Silver reward */
+	private int defaultMinSilverMovesLeft;
+
 	/** Iniitial maxLevelTime **/
 	private float defaultLevelTime;
-	
+
 	/** Initial swaps left **/
 	private int defaultSwapsLeft;
 
 	/* Number of maximum moves allowed before gameover */
 	private int numMovesLeft;			
+
+	/** Minimum moveleft to have to receive Gold reward */
+	private int minGoldMovesLeft;
+
+	/** Minimum moveleft to have to receive Silver reward */
+	private int minSilverMovesLeft;
 
 	/* Time in millisec in this level before gameover. 
 	 * Set as negative for infinite */
@@ -55,6 +68,9 @@ public class Grid {
 	private Array<Group> colorGroups;
 	private static final int MIN_CHAIN_SIZE = 3;
 	private int numMinChainGroup;
+	
+	private int prevMovesLeft;
+	
 
 	/******************************************************************************************/
 	/************************************ INIT METHODS **************************************/
@@ -119,8 +135,10 @@ public class Grid {
 					g.width = Integer.parseInt(tokens[0]);
 					g.height = Integer.parseInt(tokens[1]);
 					g.numMovesLeft = Integer.parseInt(tokens[2]);
-					g.maxLevelTime = Float.parseFloat(tokens[3]);
-					g.numSwapsLeft = Integer.parseInt(tokens[4]);
+					g.minGoldMovesLeft = Integer.parseInt(tokens[3]);
+					g.minSilverMovesLeft = Integer.parseInt(tokens[4]);
+					g.maxLevelTime = Float.parseFloat(tokens[5]);
+					g.numSwapsLeft = Integer.parseInt(tokens[6]);
 
 					// initialize grid data structure
 					// with dimensions
@@ -145,7 +163,7 @@ public class Grid {
 					for (int j = 0; j < totalNumBox; j++) {
 						Color color = Color.NONE;
 						if (tokens[j].equals("x") || tokens[j].equals("^"))
-							color = Color.NONE;
+							continue;
 						else if (tokens[j].equals("b"))
 							color = Color.BLUE;
 						else if (tokens[j].equals("g"))
@@ -167,7 +185,7 @@ public class Grid {
 		//		g.spawnGridBoxAt(1, Color.GREEN);
 		//		for (int i = 0; i < 12; i++) 
 		//			g.spawnRandomGridBox();
-		
+
 		// clone all the grid objects to save this default state
 		g.defaultGrid = new ArrayList<GridBox>(g.width*g.height);
 		for (GridBox gridBox : g.grid) {
@@ -176,11 +194,13 @@ public class Grid {
 			g.defaultGrid.add(temp);
 		}
 		g.defaultMovesLeft = g.numMovesLeft;
+		g.defaultMinGoldMovesLeft = g.minGoldMovesLeft;
+		g.defaultMinSilverMovesLeft = g.minSilverMovesLeft;
 		g.defaultLevelTime = g.maxLevelTime;
 		g.defaultSwapsLeft = g.numSwapsLeft;
 		return g;
 	}
-	
+
 	/**
 	 * Restores the default state of this level
 	 * This method is to be called when the player reloads the state of the default level
@@ -196,9 +216,11 @@ public class Grid {
 			grid.add(temp);
 		}
 		numMovesLeft = defaultMovesLeft;
+		minGoldMovesLeft = defaultMinGoldMovesLeft;
+		minSilverMovesLeft = defaultMinSilverMovesLeft;
 		maxLevelTime = defaultLevelTime;
 		numSwapsLeft = defaultSwapsLeft;
-		
+
 		return true;
 	}
 
@@ -385,7 +407,6 @@ public class Grid {
 			id = getRandomInt(1, grid.size()+1);
 
 		GridBox spawn = spawnGridBoxAt(id, color);
-		numBoxSpawned++;
 		return spawn;
 	}
 
@@ -413,6 +434,7 @@ public class Grid {
 		box.setColor(color);
 		box.setPrevId(-1);
 		System.out.println("Spawned " + (id-1) + " color " + color + " ");
+		numBoxSpawned++;
 		return box;
 	}
 
@@ -701,6 +723,36 @@ public class Grid {
 		}
 		return colorGroups;
 	}
+	
+	/**
+	 * Call this method to update and transition game state accordingly
+	 */
+	public void updateGameState() {
+		int movesLeft = getMovesLeft();
+//		System.out.println("Moves left: " + movesLeft + " Box: " + numBoxSpawned);
+		
+		// CHALLENGE Mode
+		if (game.getGameMode() == GameMode.CHALLENGE) {
+			
+			if (numBoxSpawned > 0) {
+				// if no more move is allowed, we set the game state to be GAMEOVER
+				// and tell the Render class to update things accordingly
+				if (movesLeft == 0 && getNumColorGroups() == 0) {
+					game.actionResolver.showLongToast("No more move left. Game is over!");
+					game.setGameState(GameState.GAMEOVER);
+				}
+			}
+			
+			else {
+				// if no more colored tiles are left, we transition to COMPLETE
+				if (movesLeft >= 0 && numBoxSpawned == 0) {
+					game.actionResolver.showLongToast("Level comeplete!");
+					game.setGameState(GameState.COMPLETE);
+				}
+			}
+		}
+	}
+	
 
 	/**************************************************************************************************/
 	/*************************************** AUXILIARY METHODS ****************************************/

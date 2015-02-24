@@ -3,8 +3,8 @@ package com.code2play.grid;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.alpha;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.moveTo;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.parallel;
-import static com.badlogic.gdx.scenes.scene2d.actions.Actions.scaleTo;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.rotateBy;
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.scaleTo;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -15,6 +15,7 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
@@ -22,14 +23,10 @@ import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.Button;
-import com.badlogic.gdx.scenes.scene2d.ui.Button.ButtonStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener.ChangeEvent;
 import com.badlogic.gdx.scenes.scene2d.utils.DragListener;
-import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.code2play.grid.GridBox.Color;
 
@@ -103,8 +100,23 @@ public class GameScreen implements Screen {
 	/**
 	 * UI-reset button
 	 */
-	private Button resetBtn;
-	
+	private Image resetBtn;
+
+	/**
+	 * UI-moveleft button
+	 */
+	private Image moveBtn;
+
+	/**
+	 * UI-font
+	 */
+	private BitmapFont font;
+
+	/**
+	 * UI-move label
+	 */
+	private MoveLabel moveLabel;
+
 	/** Force render once **/
 	private boolean forceRender = true;
 
@@ -140,14 +152,11 @@ public class GameScreen implements Screen {
 
 		// initialize RESET button
 		skin = new Skin();
-		ButtonStyle resetBtnStyle = new ButtonStyle();
-		Drawable resetBtnDrawable = new Image(Assets.getResetBtn()).getDrawable();
-		resetBtnStyle.up = resetBtnDrawable;
-		resetBtnStyle.down = resetBtnDrawable;
-		resetBtn = new Button(resetBtnStyle);
-		resetBtn.setOrigin(resetBtn.getWidth()/2, resetBtn.getHeight()/2);
-		resetBtn.setBounds(hudStage.getWidth()-120, hudStage.getHeight()-120, resetBtn.getWidth()*.8f, 
-				resetBtn.getHeight()*.8f);
+		resetBtn = new Image(Assets.getResetBtn());
+		float resetBtnScale = 0.8f;
+		resetBtn.setOrigin(resetBtn.getWidth()/2*resetBtnScale, resetBtn.getHeight()/2*resetBtnScale);
+		resetBtn.setBounds(hudStage.getWidth()-120, hudStage.getHeight()-120, resetBtn.getWidth()*resetBtnScale, 
+				resetBtn.getHeight()*resetBtnScale);
 		resetBtn.addListener(new InputListener() {
 			public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
 				return true;
@@ -155,15 +164,49 @@ public class GameScreen implements Screen {
 
 			// scene2d ui elements cannot be rotated
 			public void touchUp (InputEvent event, float x, float y, int pointer, int button) {
-				restartLevel();
+				if (gridBoxClearAnimTime == 0f) {
+					restartLevel();
+					event.getListenerActor().addAction(
+							rotateBy(360, .25f)
+							);
+				}
 			}
 		});
-		hudStage.addActor(resetBtn);
 
+		// initialize MOVE button
+		moveBtn = new Image(Assets.getGoldMoveBtn());
+		float moveBtnScale = .4f;
+		float moveBtnWidth = moveBtn.getWidth()/2*moveBtnScale;
+		moveBtn.setOrigin(moveBtnWidth, moveBtn.getHeight()/2*moveBtnScale);
+		moveBtn.setBounds(hudStage.getWidth()/2 - moveBtnWidth, 
+				hudStage.getHeight()-300, moveBtn.getWidth()*moveBtnScale, 
+				moveBtn.getHeight()*moveBtnScale);
+		moveBtn.addListener(new InputListener() {
+			public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				return true;
+			}
+
+			// scene2d ui elements cannot be rotated
+			public void touchUp (InputEvent event, float x, float y, int pointer, int button) {
+
+			}
+		});
+		font = new BitmapFont();
+		font.setScale(5f);
+		LabelStyle moveLableStyle = new LabelStyle(font, com.badlogic.gdx.graphics.Color.WHITE);
+		moveLabel = new MoveLabel("0", moveLableStyle, grid);
+		moveLabel.setBounds(moveBtn.getX() + 35, moveBtn.getY(), 
+				moveBtnWidth, moveBtn.getHeight());
+		Group moveBtnLabel = new Group();
+		moveBtnLabel.addActor(moveBtn);
+		moveBtnLabel.addActor(moveLabel);
+
+		hudStage.addActor(resetBtn);
+		hudStage.addActor(moveBtnLabel);
 
 		inMultiplexer.addProcessor(hudStage);
 	}
-	
+
 	/**
 	 * Reset all the UIs and grid boxes to initial loaded level
 	 */
@@ -171,6 +214,8 @@ public class GameScreen implements Screen {
 		if (game.getGameMode() == GameMode.CHALLENGE) {
 			removeAllColoredGridBoxes();
 			grid.restoreDefaultState();
+			firstSwapID = -1;
+			secondSwapID = -1;
 			forceRender = true;
 			game.actionResolver.showShortToast("Restarted level");
 		}
@@ -309,6 +354,7 @@ public class GameScreen implements Screen {
 	float deltaTime = 0f;
 	Swipe prevSwipeDir = null;
 	int prevMovesLeft = -1;
+	boolean justSwiped = false;
 	@Override
 	/**
 	 * Calls upon World instance to update its entities, then 
@@ -336,33 +382,25 @@ public class GameScreen implements Screen {
 			// check input for tap on the colored tiles
 			// if there is a tap, then we don't process swipe direction events
 			// until the colored tile is tapped again
-			if (game.getGameMode() == GameMode.CHALLENGE) {
-				int movesLeft = grid.getMovesLeft();
-				if (prevMovesLeft != movesLeft) {
-					prevMovesLeft = movesLeft;
-					System.out.println("Moves left: " + movesLeft);
-
-					// if no more move is allowed, we set the game state to be GAMEOVER
-					// and render things accordingly
-					if (movesLeft == 0) {
-						game.actionResolver.showLongToast("No more move left. Game is over!");
-						game.setGameState(GameState.GAMEOVER);
-					}
-				}
-			}
+			grid.updateGameState();
 
 			// process input
 			//TODO double elimination case
-			if ((swipeDir != null || grid.getNumColorGroups() > 0 || hasSwapped) 
+			if ( (swipeDir != null || grid.getNumColorGroups() > 0 || hasSwapped) 
 
 					//disable swipe directions
 					//proceed when animation finishes for all gridboxes (after animationTime)
-					&& deltaTime >= (gridBoxMoveAnimTime + gridBoxClearAnimTime)) {
+					&& deltaTime >= (gridBoxMoveAnimTime + gridBoxClearAnimTime) ) {
 
 				// update gridbox - swipe
 				if (!hasSwapped) {
-					if (grid.getNumColorGroups() > 0 && prevSwipeDir != null) 
+					if (grid.getNumColorGroups() > 0 && prevSwipeDir != null) {
+						if (justSwiped) {
+							grid.updateMoveCount();
+							justSwiped = false;
+						}
 						grid.update(delta, prevSwipeDir);
+					}
 					else if (swipeDir != null) {
 						if (grid.update(delta, swipeDir))
 							grid.updateMoveCount();
@@ -384,6 +422,8 @@ public class GameScreen implements Screen {
 					grid.updateMoveCount();
 					firstSwapID = -1;
 					secondSwapID = -1;
+					prevSwipeDir = null;
+					justSwiped = true;
 				}
 
 				// process moves to be rendered
@@ -429,15 +469,37 @@ public class GameScreen implements Screen {
 			// remove input processor 
 			if (inMultiplexer.getProcessors().contains(gameStage, false)) 
 				inMultiplexer.removeProcessor(gameStage);
-			
+
 			if (inMultiplexer.getProcessors().contains(hudStage, false)) 
 				inMultiplexer.removeProcessor(hudStage);
-			
+
 			gameStage.act(delta);
 			gameStage.draw();
-			
+
 			hudStage.act(delta);
+			hudStage.draw();
+
+			break;
+
+		case COMPLETE:
+
+			// clear screen
+			Gdx.gl.glClearColor(0, 0, 0, 1);
+			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+			// update the gameStage and draw accordingly
+			// remove input processor 
+			if (inMultiplexer.getProcessors().contains(gameStage, false)) 
+				inMultiplexer.removeProcessor(gameStage);
+
+			if (inMultiplexer.getProcessors().contains(hudStage, false)) 
+				inMultiplexer.removeProcessor(hudStage);
+
+			gameStage.act(delta);
 			gameStage.draw();
+
+			hudStage.act(delta);
+			hudStage.draw();
 
 			break;
 
@@ -651,6 +713,7 @@ public class GameScreen implements Screen {
 	public void dispose() {
 		gameStage.dispose();
 		skin.dispose();
+		font.dispose();
 	}
 
 }
