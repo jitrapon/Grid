@@ -5,16 +5,25 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 public class MoveLabel extends Label {
 
 	private Grid grid;
+	private float singleDigitPos;
+	private float doubleDigitPos;
 
-	public MoveLabel(CharSequence text, LabelStyle style, Grid grid) {
+	public MoveLabel(CharSequence text, LabelStyle style, Grid grid, float singlePos, float doublePos) {
 		super(text, style);
 		this.grid = grid;
+		this.singleDigitPos = singlePos;
+		this.doubleDigitPos = doublePos;
 	}
 
 	@Override
 	public void act(final float delta) {
 		int movesLeft = grid.getMovesLeft();
 		setText(movesLeft + "");
+		if (movesLeft < 10) 
+			setX(singleDigitPos);
+		else 
+			setX(doubleDigitPos);
+			
 		super.act(delta);
 	}
 }

@@ -15,7 +15,10 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
@@ -97,24 +100,25 @@ public class GameScreen implements Screen {
 	 */
 	private static float DRAG_MIN_THRESHOLD = 50f;
 
-	/**
-	 * UI-reset button
-	 */
+	/** UI-reset button */
 	private Image resetBtn;
 
-	/**
-	 * UI-moveleft button
-	 */
+	/** UI-moveleft button */
 	private Image moveBtn;
 
-	/**
-	 * UI-font
-	 */
-	private BitmapFont font;
+	/** UI-font for the gamescreen */
+	private BitmapFont moveBtnFont;
 
-	/**
-	 * UI-move label
-	 */
+	/** Font generator **/
+	private FreeTypeFontGenerator fontGenerator;
+
+	/** Font parameter **/
+	private FreeTypeFontParameter moveBtnFontParam;
+	
+	/** Move Button Font color **/
+	private String moveBtnFontColor = "FF5656";
+
+	/** UI-move label */
 	private MoveLabel moveLabel;
 
 	/** Force render once **/
@@ -191,11 +195,23 @@ public class GameScreen implements Screen {
 
 			}
 		});
-		font = new BitmapFont();
-		font.setScale(5f);
-		LabelStyle moveLableStyle = new LabelStyle(font, com.badlogic.gdx.graphics.Color.WHITE);
-		moveLabel = new MoveLabel("0", moveLableStyle, grid);
-		moveLabel.setBounds(moveBtn.getX() + 35, moveBtn.getY(), 
+
+		// generate move button font
+		fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("font/BlackoakStd.otf"));
+		moveBtnFontParam = new FreeTypeFontParameter();
+		moveBtnFontParam.minFilter = Texture.TextureFilter.Nearest;
+		moveBtnFontParam.magFilter = Texture.TextureFilter.MipMapLinearNearest;
+		moveBtnFontParam.size = (int)Math.ceil(40);
+		fontGenerator.scaleForPixelHeight((int)Math.ceil(40));
+		moveBtnFont = fontGenerator.generateFont(moveBtnFontParam);
+		moveBtnFont.setScale(1f, 2f);
+		fontGenerator.dispose();
+
+		LabelStyle moveLableStyle = new LabelStyle(moveBtnFont, GameScreen.parseColor(moveBtnFontColor));
+		float singleDigitPos = moveBtn.getX() + 50;
+		float doubleDigitPos = moveBtn.getX() + 36;
+		moveLabel = new MoveLabel("0", moveLableStyle, grid, singleDigitPos, doubleDigitPos);
+		moveLabel.setBounds(doubleDigitPos, moveBtn.getY(), 
 				moveBtnWidth, moveBtn.getHeight());
 		Group moveBtnLabel = new Group();
 		moveBtnLabel.addActor(moveBtn);
@@ -206,6 +222,19 @@ public class GameScreen implements Screen {
 
 		inMultiplexer.addProcessor(hudStage);
 	}
+
+	private static com.badlogic.gdx.graphics.Color parseColor(String hex) {  
+		String s1 = hex.substring(0, 2);  
+		int v1 = Integer.parseInt(s1, 16);  
+		float f1 = (float) v1 / 255f;  
+		String s2 = hex.substring(2, 4);  
+		int v2 = Integer.parseInt(s2, 16);  
+		float f2 = (float) v2 / 255f;  
+		String s3 = hex.substring(4, 6);  
+		int v3 = Integer.parseInt(s3, 16);  
+		float f3 = (float) v3 / 255f;  
+		return new com.badlogic.gdx.graphics.Color(f1, f2, f3, 1);  
+	}  
 
 	/**
 	 * Reset all the UIs and grid boxes to initial loaded level
@@ -713,7 +742,7 @@ public class GameScreen implements Screen {
 	public void dispose() {
 		gameStage.dispose();
 		skin.dispose();
-		font.dispose();
+		moveBtnFont.dispose();
 	}
 
 }
