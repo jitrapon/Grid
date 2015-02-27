@@ -58,6 +58,9 @@ public class Grid {
 	
 	/* Starting number of swaps in this level */
 	private int numSwapsLeft;
+	
+	/* Number of undo moves left (max is 9) */
+	private int undoCount;
 
 	/* all the gridboxes in this grid */
 	private List<GridBox> grid;
@@ -117,6 +120,8 @@ public class Grid {
 		g.numMovesLeft = 0;
 		g.maxLevelTime = 0f;
 		g.numSwapsLeft = 0;
+		// load undo move stored for this user TODO
+		g.undoCount = 9;
 
 		// read the file and split the string into extractable content
 		// initialize grid properties
@@ -226,6 +231,14 @@ public class Grid {
 
 		return true;
 	}
+	
+	public void undoMove() {
+		if (undoCount >= 1) undoCount--;
+	}
+	
+	public void addUndoCount() {
+		if (undoCount < 9) undoCount++;
+	}
 
 	/******************************************************************************************/
 	/************************************ GETTER METHODS **************************************/
@@ -261,6 +274,10 @@ public class Grid {
 
 	public int getNumSwapsLeft() {
 		return numSwapsLeft;
+	}
+	
+	public int getUndoCount() {
+		return undoCount;
 	}
 
 
@@ -386,6 +403,7 @@ public class Grid {
 			first.setColor(secondColor);
 			first.setPrevId(second.getId());
 		}
+		numSwapsLeft--;
 	}
 
 	/**

@@ -106,20 +106,47 @@ public class GameScreen implements Screen {
 	/** UI-moveleft button */
 	private Image moveBtn;
 
+	/** UI-undo button */
+	private Image undoBtn;
+
+	/** UI-swap button */
+	private Image swapBtn;
+
 	/** UI-font for the gamescreen */
 	private BitmapFont moveBtnFont;
+
+	/** UI-font for the Undo button */
+	private BitmapFont undoBtnFont;
+
+	/** UI-font for the Swap button */
+	private BitmapFont swapBtnFont;
 
 	/** Font generator **/
 	private FreeTypeFontGenerator fontGenerator;
 
-	/** Font parameter **/
+	/** Move button font parameter **/
 	private FreeTypeFontParameter moveBtnFontParam;
-	
+
+	/** Undo button font parameter **/
+	private FreeTypeFontParameter undoBtnFontParam;
+
+	/** Swap button font parameter **/
+	private FreeTypeFontParameter swapBtnFontParam;
+
 	/** Move Button Font color **/
 	private String moveBtnFontColor = "FF5656";
 
+	/** Undo/Swap Button Font color **/
+	private String vanillaFontColor = "FFF1bF";
+
 	/** UI-move label */
 	private MoveLabel moveLabel;
+
+	/** UI-undo label */
+	private UndoLabel undoLabel;
+
+	/** UI-swap label */
+	private SwapLabel swapLabel;
 
 	/** Force render once **/
 	private boolean forceRender = true;
@@ -171,11 +198,14 @@ public class GameScreen implements Screen {
 				if (gridBoxClearAnimTime == 0f) {
 					restartLevel();
 					event.getListenerActor().addAction(
-							rotateBy(360, .25f)
+							rotateBy(-360, .25f)
 							);
 				}
 			}
 		});
+
+		// init font generator
+		fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("font/BlackoakStd.otf"));
 
 		// initialize MOVE button
 		moveBtn = new Image(Assets.getGoldMoveBtn());
@@ -196,8 +226,69 @@ public class GameScreen implements Screen {
 			}
 		});
 
+		// initialize undo button
+		undoBtn = new Image(Assets.getUndoBtn());
+		float undoBtnScale = 1f;
+		undoBtn.setOrigin(undoBtn.getWidth()/2*undoBtnScale, undoBtn.getHeight()/2*undoBtnScale);
+		undoBtn.setBounds(moveBtn.getX() + 195, moveBtn.getY() + 25, undoBtn.getWidth()*undoBtnScale, 
+				undoBtn.getHeight()*undoBtnScale);
+		undoBtn.addListener(new InputListener() {
+			public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				return true;
+			}
+
+			// scene2d ui elements cannot be rotated
+			public void touchUp (InputEvent event, float x, float y, int pointer, int button) {
+				if (gridBoxClearAnimTime == 0f) {
+					undoMove();
+					event.getListenerActor().addAction(
+							rotateBy(360, .25f)
+							);
+				}
+			}
+		});
+		undoBtnFontParam = new FreeTypeFontParameter();
+		undoBtnFontParam.minFilter = Texture.TextureFilter.Nearest;
+		undoBtnFontParam.magFilter = Texture.TextureFilter.MipMapLinearNearest;
+		undoBtnFontParam.size = (int)Math.ceil(45);
+		fontGenerator.scaleForPixelHeight((int)Math.ceil(45));
+		undoBtnFont = fontGenerator.generateFont(undoBtnFontParam);
+		undoBtnFont.setScale(.5f, 1.2f);
+
+		LabelStyle undoLabelStyle = new LabelStyle(undoBtnFont, GameScreen.parseColor(vanillaFontColor));
+		undoLabel = new UndoLabel("0", undoLabelStyle, grid);
+		undoLabel.setBounds(undoBtn.getX() + 40, undoBtn.getY(), undoBtn.getWidth(), undoBtn.getHeight());
+
+		Group undoBtnLabel = new Group();
+		undoBtnLabel.addActor(undoLabel);
+		undoBtnLabel.addActor(undoBtn);
+
+		// initialize swap number indicator
+		swapBtn = new Image(Assets.getSwapBtn());
+		float swapBtnScaleX = 1f;
+		float swapBtnScaleY = 0.8f;
+		swapBtn.setOrigin(swapBtn.getWidth()/2*swapBtnScaleX, swapBtn.getHeight()/2*swapBtnScaleY);
+		swapBtn.setBounds(moveBtn.getX() - 160, moveBtn.getY() + 25, swapBtn.getWidth()*swapBtnScaleX, 
+				swapBtn.getHeight()*swapBtnScaleY);
+		swapBtnFontParam = new FreeTypeFontParameter();
+		swapBtnFontParam.minFilter = Texture.TextureFilter.Nearest;
+		swapBtnFontParam.magFilter = Texture.TextureFilter.MipMapLinearNearest;
+		swapBtnFontParam.size = (int)Math.ceil(45);
+		fontGenerator.scaleForPixelHeight((int)Math.ceil(45));
+		swapBtnFont = fontGenerator.generateFont(swapBtnFontParam);
+		swapBtnFont.setScale(.4f, .6f);
+
+		LabelStyle swapLabelStyle = new LabelStyle(undoBtnFont, GameScreen.parseColor(vanillaFontColor));
+		float singleDigitPos = swapBtn.getX()+50;
+		float doubleDigitPos = swapBtn.getX()+40;
+		swapLabel = new SwapLabel("0", swapLabelStyle, grid, singleDigitPos, doubleDigitPos);
+		swapLabel.setBounds(swapBtn.getX()+40, swapBtn.getY()+55, swapBtn.getWidth(), swapBtn.getHeight());
+
+		Group swapBtnLabel = new Group();
+		swapBtnLabel.addActor(swapLabel);
+		swapBtnLabel.addActor(swapBtn);
+
 		// generate move button font
-		fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("font/BlackoakStd.otf"));
 		moveBtnFontParam = new FreeTypeFontParameter();
 		moveBtnFontParam.minFilter = Texture.TextureFilter.Nearest;
 		moveBtnFontParam.magFilter = Texture.TextureFilter.MipMapLinearNearest;
@@ -208,18 +299,23 @@ public class GameScreen implements Screen {
 		fontGenerator.dispose();
 
 		LabelStyle moveLableStyle = new LabelStyle(moveBtnFont, GameScreen.parseColor(moveBtnFontColor));
-		float singleDigitPos = moveBtn.getX() + 50;
-		float doubleDigitPos = moveBtn.getX() + 36;
+		singleDigitPos = moveBtn.getX() + 50;
+		doubleDigitPos = moveBtn.getX() + 36;
 		moveLabel = new MoveLabel("0", moveLableStyle, grid, singleDigitPos, doubleDigitPos);
 		moveLabel.setBounds(doubleDigitPos, moveBtn.getY(), 
 				moveBtnWidth, moveBtn.getHeight());
+
 		Group moveBtnLabel = new Group();
 		moveBtnLabel.addActor(moveBtn);
 		moveBtnLabel.addActor(moveLabel);
 
+		// add all actor and group to the stage
 		hudStage.addActor(resetBtn);
 		hudStage.addActor(moveBtnLabel);
+		hudStage.addActor(undoBtnLabel);
+		hudStage.addActor(swapBtnLabel);
 
+		// add this stage to the multiplexer
 		inMultiplexer.addProcessor(hudStage);
 	}
 
@@ -248,6 +344,15 @@ public class GameScreen implements Screen {
 			forceRender = true;
 			game.actionResolver.showShortToast("Restarted level");
 		}
+	}
+
+	/**
+	 * Undo the current move and restore previous game state before the
+	 * move occured
+	 */
+	private void undoMove() {
+		//TODO
+		grid.undoMove();
 	}
 
 	/**
@@ -379,6 +484,10 @@ public class GameScreen implements Screen {
 			}
 		}
 	}
+	
+	private int getNumSwaps() {
+		return grid.getNumSwapsLeft();
+	}
 
 	float deltaTime = 0f;
 	Swipe prevSwipeDir = null;
@@ -405,7 +514,6 @@ public class GameScreen implements Screen {
 				forceRender = false;
 			}
 
-			//TODO challenge mode
 			// draw timer, draw undo count, draw swap count, draw retry, draw pop (make one tile disappear),
 			// draw relocate (move one tile to empty tile)
 			// check input for tap on the colored tiles
@@ -414,7 +522,6 @@ public class GameScreen implements Screen {
 			grid.updateGameState();
 
 			// process input
-			//TODO double elimination case
 			if ( (swipeDir != null || grid.getNumColorGroups() > 0 || hasSwapped) 
 
 					//disable swipe directions
@@ -580,6 +687,7 @@ public class GameScreen implements Screen {
 
 					// add touch listener
 					gridBoxImg.addListener(new InputListener() {
+						
 						@Override
 						public boolean touchDown(InputEvent event, float x, float y,
 								int pointer, int button) {
@@ -590,47 +698,51 @@ public class GameScreen implements Screen {
 						@Override
 						public void touchUp (InputEvent event, float x, float y, 
 								int pointer, int button) {
-							Image img = (Image) event.getListenerActor();
-							int touchID = ((GridBox)img.getUserObject()).getId();
+							if (getNumSwaps() > 0) {
 
-							// if player has not selected any other tile before this
-							// make this image ID the first swap image ID
-							if (firstSwapID == -1 && !hasDragged) {
-								img.addAction(
-										alpha (.3f, .2f)
-										);
-								firstSwapID = touchID;
-								Gdx.app.log("Swap 1", "Selected image ID " + firstSwapID);
-								hasDragged = false;
-								firstSwapImg = img;
+								Image img = (Image) event.getListenerActor();
+								int touchID = ((GridBox)img.getUserObject()).getId();
+
+								// if player has not selected any other tile before this
+								// make this image ID the first swap image ID
+								if (firstSwapID == -1 && !hasDragged) {
+									img.addAction(
+											alpha (.3f, .2f)
+											);
+									firstSwapID = touchID;
+									hasDragged = false;
+									firstSwapImg = img;
+								}
+
+								// if player has selected the same image that was selected as the first swap,
+								// reset the first swap image
+								else if (firstSwapID == touchID) {
+									img.addAction(
+											alpha (1f, .2f)
+											);
+									firstSwapID = -1;
+									firstSwapImg = null;
+								}
+
+								// if the first swap image has already been selected, then set this image
+								// to be the second swap and change their previous IDs accordingly
+								else if (firstSwapID != -1) {
+									secondSwapID = touchID;
+
+									// remove effect for the first swap image
+									firstSwapImg.addAction(
+											alpha (1f, .2f)
+											);
+									hasSwapped = true;
+
+									Gdx.app.log("Swap 2", "Swap " + firstSwapID + " with " + secondSwapID);
+								}
+
+
 							}
-
-							// if player has selected the same image that was selected as the first swap,
-							// reset the first swap image
-							else if (firstSwapID == touchID) {
-								img.addAction(
-										alpha (1f, .2f)
-										);
-								Gdx.app.log("Swap 1", "Deselected image ID " + firstSwapID);
-								firstSwapID = -1;
-								firstSwapImg = null;
+							else {
+								game.actionResolver.showShortToast("No more swaps left to use!");
 							}
-
-							// if the first swap image has already been selected, then set this image
-							// to be the second swap and change their previous IDs accordingly
-							else if (firstSwapID != -1) {
-								secondSwapID = touchID;
-
-								// remove effect for the first swap image
-								firstSwapImg.addAction(
-										alpha (1f, .2f)
-										);
-								hasSwapped = true;
-
-								Gdx.app.log("Swap 2", "Swap " + firstSwapID + " with " + secondSwapID);
-							}
-
-
 						}
 					});
 					gridGroup.addActor(gridBoxImg);
@@ -743,6 +855,8 @@ public class GameScreen implements Screen {
 		gameStage.dispose();
 		skin.dispose();
 		moveBtnFont.dispose();
+		undoBtnFont.dispose();
+		swapBtnFont.dispose();
 	}
 
 }

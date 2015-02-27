@@ -20,6 +20,8 @@ public class Assets {
 	
 	// change button reference names here
 	private static Texture resetBtn;
+	private static Texture undoBtn;
+	private static Texture swapBtn;
 	private static Texture goldMoveBtn;
 	private static Texture silverMoveBtn;
 	private static Texture bronzeMoveBtn;
@@ -63,6 +65,16 @@ public class Assets {
 		goldMoveBtn = new Texture(Gdx.files.internal("ui/move_gold.png"));
 		silverMoveBtn = new Texture(Gdx.files.internal("ui/move_silver.png"));
 		bronzeMoveBtn = new Texture(Gdx.files.internal("ui/move_bronze.png"));
+		undoBtn = new Texture(Gdx.files.internal("ui/undo.png"));
+		swapBtn = new Texture(Gdx.files.internal("ui/swap.png"));
+	}
+	
+	public static Texture getUndoBtn() {
+		return undoBtn;
+	}
+	
+	public static Texture getSwapBtn() {
+		return swapBtn;
 	}
 	
 	public static Texture getResetBtn() {
