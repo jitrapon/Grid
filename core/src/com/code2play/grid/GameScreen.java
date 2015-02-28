@@ -16,7 +16,9 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 import com.badlogic.gdx.math.Interpolation;
@@ -27,31 +29,55 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.utils.DragListener;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.code2play.grid.GridBox.Color;
 
+/**
+ * Controls how the game elements are rendered onto the game application view.
+ * 
+ * @author Jitrapon Tiachunpun
+ *
+ */
 public class GameScreen implements Screen {
+	
+	/** Shared spritebatch between stages **/
+	private Batch batch;
 
-	// Grid constants
-	/** Game stage: contains all game elements onscreen **/
+	/** Stage that contains all game elements on-screen **/
 	private Stage gameStage;
 
-	/** Input multiplexer for game stage **/
+	/** Input handler that handles input to the game elements and the HUD **/
 	private InputMultiplexer inMultiplexer;
 
-	/** HUD stage: contains all control elements of the HUD onscreen **/
+	/** Stage that contains all control elements of the HUD on-screen **/
 	private Stage hudStage;
 
+	/** Our camera on this game screen **/
 	private OrthographicCamera camera;
+
+	/** Lower maximum x values (width) in world coordinates of the game screen **/
 	public static final int width = 720;
+
+	/** Lower maximum y values (height) in world coordinates of the game screen **/
 	public static final int height = 1280;
+
+	/** Upper maximum x values (width) in world coordinates of the game screen **/
 	public static final int maxWidth = 1080;
+
+	/** Upper maximum y values (height) in world coordinates of the game screen **/
 	public static final int maxHeight = 1920 ;
+
+	/** Temporary flag for the renderer to know that this colored box will be removed */
 	private static final int REMOVED = -3;
+
+	/** The grid box width **/
 	private float boxWidth;
+
+	/** The grid box height **/
 	private float boxHeight;
 
 	/** Instance of the Game object that contains game state information **/
@@ -121,6 +147,9 @@ public class GameScreen implements Screen {
 	/** UI-font for the Swap button */
 	private BitmapFont swapBtnFont;
 
+	/** DEBUG font **/
+	private BitmapFont debugFont;
+
 	/** Font generator **/
 	private FreeTypeFontGenerator fontGenerator;
 
@@ -134,10 +163,10 @@ public class GameScreen implements Screen {
 	private FreeTypeFontParameter swapBtnFontParam;
 
 	/** Move Button Font color **/
-	private String moveBtnFontColor = "FF5656";
+	private final String moveBtnFontColor = "FF5656";
 
 	/** Undo/Swap Button Font color **/
-	private String vanillaFontColor = "FFF1bF";
+	private final String vanillaFontColor = "FFF1bF";
 
 	/** UI-move label */
 	private MoveLabel moveLabel;
@@ -147,6 +176,9 @@ public class GameScreen implements Screen {
 
 	/** UI-swap label */
 	private SwapLabel swapLabel;
+
+	/** DEBUG: FPS Logger **/
+	private Label fpsLabel;
 
 	/** Force render once **/
 	private boolean forceRender = true;
@@ -168,8 +200,10 @@ public class GameScreen implements Screen {
 		camera = new OrthographicCamera();
 		//		camera.setToOrtho(true);
 		inMultiplexer = new InputMultiplexer();
-		initHUDStage();
-		initGameStage();
+		
+		batch = new SpriteBatch();					// recycle spritebatch for performance
+		initHUDStage(batch);
+		initGameStage(batch);							
 
 		Gdx.input.setInputProcessor(inMultiplexer);
 	}
@@ -177,9 +211,9 @@ public class GameScreen implements Screen {
 	/**
 	 * Initialize the HUD stage
 	 */
-	private void initHUDStage() {
+	private void initHUDStage(Batch batch) {
 		// create a new HUD stage to hold for buttons
-		hudStage = new Stage( new ExtendViewport(width, height, maxWidth, maxHeight, camera) );
+		hudStage = new Stage( new ExtendViewport(width, height, maxWidth, maxHeight, camera), batch );
 
 		// initialize RESET button
 		skin = new Skin();
@@ -309,6 +343,16 @@ public class GameScreen implements Screen {
 		moveBtnLabel.addActor(moveBtn);
 		moveBtnLabel.addActor(moveLabel);
 
+		// DEBUG: fps logger
+		if (game.showFPS) {
+			debugFont = new BitmapFont();
+			debugFont.setScale(1.5f);
+			fpsLabel = new Label("FPS: ", new LabelStyle(debugFont, com.badlogic.gdx.graphics.Color.WHITE));
+			fpsLabel.setX(hudStage.getWidth()/2);
+			fpsLabel.setY(hudStage.getHeight() - 50);
+			hudStage.addActor(fpsLabel);
+		}
+
 		// add all actor and group to the stage
 		hudStage.addActor(resetBtn);
 		hudStage.addActor(moveBtnLabel);
@@ -357,9 +401,10 @@ public class GameScreen implements Screen {
 
 	/**
 	 * Initialize the Game stage
+	 * @param batch The SpriteBatch created from HUD stage
 	 */
-	private void initGameStage() {
-		gameStage = new Stage( new ExtendViewport(width, height, maxWidth, maxHeight, camera) );
+	private void initGameStage(Batch batch) {
+		gameStage = new Stage( new ExtendViewport(width, height, maxWidth, maxHeight, camera), batch );
 		gridCoordinates = new HashMap<Integer, Vector2>();
 		firstSwapID = -1;
 		secondSwapID = -1;
@@ -484,7 +529,7 @@ public class GameScreen implements Screen {
 			}
 		}
 	}
-	
+
 	private int getNumSwaps() {
 		return grid.getNumSwapsLeft();
 	}
@@ -577,6 +622,9 @@ public class GameScreen implements Screen {
 			// update the gameStage and draw accordingly
 			gameStage.act(delta);
 			gameStage.draw();
+			
+			if (game.showFPS)
+				fpsLabel.setText("FPS: " + Gdx.graphics.getFramesPerSecond());
 
 			// update and draw the HUD
 			hudStage.act(delta);
@@ -687,7 +735,7 @@ public class GameScreen implements Screen {
 
 					// add touch listener
 					gridBoxImg.addListener(new InputListener() {
-						
+
 						@Override
 						public boolean touchDown(InputEvent event, float x, float y,
 								int pointer, int button) {
@@ -739,9 +787,6 @@ public class GameScreen implements Screen {
 								}
 
 
-							}
-							else {
-								game.actionResolver.showShortToast("No more swaps left to use!");
 							}
 						}
 					});
@@ -853,10 +898,14 @@ public class GameScreen implements Screen {
 	// never called automatically
 	public void dispose() {
 		gameStage.dispose();
+		hudStage.dispose();
 		skin.dispose();
 		moveBtnFont.dispose();
 		undoBtnFont.dispose();
 		swapBtnFont.dispose();
+		if (debugFont != null) debugFont.dispose();
+		batch.dispose();
+		Gdx.app.log("DISPOSE", "GAMESCREEN DISPOSED");
 	}
 
 }

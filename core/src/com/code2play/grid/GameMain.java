@@ -17,6 +17,9 @@ public class GameMain extends Game {
 	/** Game states **/
 	private GameState gameState;
 	
+	/** DEBUG: whether or not to log FPS **/
+	public boolean showFPS;
+	
 	/** Game state constants **/
 	private static final int DEFAULT_GRID_WIDTH = 4;
 	private static final int DEFAULT_GRID_HEIGHT = 4;
@@ -42,6 +45,9 @@ public class GameMain extends Game {
 		// loading resources, etc.
 		Assets.load();
 		System.out.println("Launching Grid");
+		
+		// DEBUG: set display fps
+		showFPS = true;
 		
 		// initialize grid
 		//TODO done in puzzle choosing screen
