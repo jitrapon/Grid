@@ -43,7 +43,7 @@ import com.code2play.grid.GridBox.Color;
  *
  */
 public class GameScreen implements Screen {
-	
+
 	/** Shared spritebatch between stages **/
 	private Batch batch;
 
@@ -130,7 +130,7 @@ public class GameScreen implements Screen {
 	private Image resetBtn;
 
 	/** UI-moveleft button */
-	private Image moveBtn;
+	private MoveImage moveBtn;
 
 	/** UI-undo button */
 	private Image undoBtn;
@@ -194,18 +194,20 @@ public class GameScreen implements Screen {
 	 * @param g
 	 */
 	public GameScreen(GameMain g) {
+		// first loaded this screen
 		// game instance is the same one as the first created
 		game = g;
 		grid = game.getGrid();
 		camera = new OrthographicCamera();
 		//		camera.setToOrtho(true);
 		inMultiplexer = new InputMultiplexer();
-		
+
 		batch = new SpriteBatch();					// recycle spritebatch for performance
 		initHUDStage(batch);
 		initGameStage(batch);							
 
 		Gdx.input.setInputProcessor(inMultiplexer);
+		game.actionResolver.showShortToast("Level " + grid.getLevel());
 	}
 
 	/**
@@ -242,7 +244,8 @@ public class GameScreen implements Screen {
 		fontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("font/BlackoakStd.otf"));
 
 		// initialize MOVE button
-		moveBtn = new Image(Assets.getGoldMoveBtn());
+		moveBtn = new MoveImage(grid, Assets.getGoldMoveBtn(), Assets.getSilverMoveBtn(), 
+				Assets.getBronzeMoveBtn());
 		float moveBtnScale = .4f;
 		float moveBtnWidth = moveBtn.getWidth()/2*moveBtnScale;
 		moveBtn.setOrigin(moveBtnWidth, moveBtn.getHeight()/2*moveBtnScale);
@@ -323,6 +326,7 @@ public class GameScreen implements Screen {
 		swapBtnLabel.addActor(swapBtn);
 
 		// generate move button font
+		// specific to CHALLENGE mode only
 		moveBtnFontParam = new FreeTypeFontParameter();
 		moveBtnFontParam.minFilter = Texture.TextureFilter.Nearest;
 		moveBtnFontParam.magFilter = Texture.TextureFilter.MipMapLinearNearest;
@@ -545,13 +549,13 @@ public class GameScreen implements Screen {
 	 */
 	public void render(float delta) {
 
+		// clear screen
+		Gdx.gl.glClearColor(0, 0, 0, 1);
+		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
 		switch(game.getCurrentState()) {
 
 		case PLAYING:
-
-			// clear screen
-			Gdx.gl.glClearColor(0, 0, 0, 1);
-			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
 			// render grid for the first time
 			if (forceRender) {
@@ -565,7 +569,7 @@ public class GameScreen implements Screen {
 			// if there is a tap, then we don't process swipe direction events
 			// until the colored tile is tapped again
 			grid.updateGameState();
-
+			
 			// process input
 			if ( (swipeDir != null || grid.getNumColorGroups() > 0 || hasSwapped) 
 
@@ -622,7 +626,7 @@ public class GameScreen implements Screen {
 			// update the gameStage and draw accordingly
 			gameStage.act(delta);
 			gameStage.draw();
-			
+
 			if (game.showFPS)
 				fpsLabel.setText("FPS: " + Gdx.graphics.getFramesPerSecond());
 
@@ -645,10 +649,6 @@ public class GameScreen implements Screen {
 
 		case GAMEOVER:
 
-			// clear screen
-			Gdx.gl.glClearColor(0, 0, 0, 1);
-			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
 			// update the gameStage and draw accordingly
 			// remove input processor 
 			if (inMultiplexer.getProcessors().contains(gameStage, false)) 
@@ -667,10 +667,6 @@ public class GameScreen implements Screen {
 
 		case COMPLETE:
 
-			// clear screen
-			Gdx.gl.glClearColor(0, 0, 0, 1);
-			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
 			// update the gameStage and draw accordingly
 			// remove input processor 
 			if (inMultiplexer.getProcessors().contains(gameStage, false)) 
@@ -684,6 +680,10 @@ public class GameScreen implements Screen {
 
 			hudStage.act(delta);
 			hudStage.draw();
+			
+			// if Continue is pressed, then end this screen
+			// and reloads the next level
+			// completed = true;
 
 			break;
 

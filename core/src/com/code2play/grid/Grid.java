@@ -21,6 +21,9 @@ public class Grid {
 
 	/* State of the game */
 	private GameMain game;
+	
+	/* Current level */
+	private int level;
 
 	/** Initial game state (from level load in CHALLENGE MODE) **/
 	private List<GridBox> defaultGrid;
@@ -61,7 +64,7 @@ public class Grid {
 	
 	/* Number of undo moves left (max is 9) */
 	private int undoCount;
-
+	
 	/* all the gridboxes in this grid */
 	private List<GridBox> grid;
 	private int width;
@@ -116,7 +119,7 @@ public class Grid {
 	 * @param file Path in the assets to the level file
 	 */
 	public static Grid load(GameMain game, FileHandle file) {
-		Grid g = new Grid(game);
+		Grid g = new Grid(game);			// set to SINGLETON instance
 		g.numMovesLeft = 0;
 		g.maxLevelTime = 0f;
 		g.numSwapsLeft = 0;
@@ -205,9 +208,10 @@ public class Grid {
 		g.defaultLevelTime = g.maxLevelTime;
 		g.defaultSwapsLeft = g.numSwapsLeft;
 		g.defaultNumSpawned = g.numBoxSpawned;
+		g.level = Integer.parseInt( file.name().substring(0, file.name().indexOf('.')) );
 		return g;
 	}
-
+	
 	/**
 	 * Restores the default state of this level
 	 * This method is to be called when the player reloads the state of the default level
@@ -242,6 +246,18 @@ public class Grid {
 
 	/******************************************************************************************/
 	/************************************ GETTER METHODS **************************************/
+	
+	public int getMinGoldMoves() {
+		return minGoldMovesLeft;
+	}
+	
+	public int getMinSilverMoves() {
+		return minSilverMovesLeft;
+	}
+	
+	public int getLevel() {
+		return level;
+	}
 
 	public int getWidth() {
 		return width;

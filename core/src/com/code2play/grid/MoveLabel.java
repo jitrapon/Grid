@@ -7,8 +7,9 @@ public class MoveLabel extends Label {
 	private Grid grid;
 	private float singleDigitPos;
 	private float doubleDigitPos;
-
-	public MoveLabel(CharSequence text, LabelStyle style, Grid grid, float singlePos, float doublePos) {
+	
+	public MoveLabel(CharSequence text, LabelStyle style, Grid grid, 
+			float singlePos, float doublePos) {
 		super(text, style);
 		this.grid = grid;
 		this.singleDigitPos = singlePos;
@@ -18,6 +19,8 @@ public class MoveLabel extends Label {
 	@Override
 	public void act(final float delta) {
 		int movesLeft = grid.getMovesLeft();
+		
+		// correct digit positions
 		setText(movesLeft + "");
 		if (movesLeft < 10) 
 			setX(singleDigitPos);

@@ -122,5 +122,10 @@ public class Assets {
 		background.dispose();
 		atlas.dispose();
 		resetBtn.dispose();
+		undoBtn.dispose();
+		swapBtn.dispose();
+		goldMoveBtn.dispose();
+		silverMoveBtn.dispose();
+		bronzeMoveBtn.dispose();
 	}
 }
