@@ -35,3 +35,12 @@ In classic mode, default number of moves before another random colored square sp
       	1. When a color group is removed, and at the same turn, another same-colored tile moves in to replace
       		one of the spots, the colored tile doesn't update correctly.
       	2. Adjacent same-colored tiles sometimes don't move in the correct order.
+
+
+	Special Grid:
+	1. Numbered box: Any action done on the box (i.e. swipe, swap) will decrement the 		number. Once the number is 0, the box disappears.
+	2. Wildcard box: Special box that will pair with any other colored box and can be 		used to eliminate them.
+	3. Blocked box: Cannot move and blocks other box to take its space.
+	4. Timed box: Box that are timed in seconds. When its time runs out, it 			disappears.
+	5. Colored-edge empty box: If the matching colored box takes its space, player 			will be awarded with an indicated special item.
+	6. Stoned box: Colored box that cannot move but can be eliminated (normal rule 			applies).
