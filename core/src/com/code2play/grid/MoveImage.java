@@ -1,6 +1,5 @@
 package com.code2play.grid;
 
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
@@ -14,12 +13,12 @@ public class MoveImage extends Image {
 	private Drawable bronze;
 	private CoinType coinType;
 
-	public MoveImage(Grid g, Texture goldTxt, Texture silverTxt, Texture bronzeTxt) {
+	public MoveImage(Grid g, TextureRegion goldTxt, TextureRegion silverTxt, TextureRegion bronzeTxt) {
 		super(goldTxt);
 		grid = g;
-		gold = new TextureRegionDrawable(new TextureRegion(goldTxt));
-		silver = new TextureRegionDrawable(new TextureRegion(silverTxt));
-		bronze = new TextureRegionDrawable(new TextureRegion(bronzeTxt));
+		gold = new TextureRegionDrawable(goldTxt);
+		silver = new TextureRegionDrawable(silverTxt);
+		bronze = new TextureRegionDrawable(bronzeTxt);
 		coinType = CoinType.GOLD;
 	}
 	

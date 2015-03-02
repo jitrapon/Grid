@@ -8,36 +8,93 @@ import com.code2play.grid.GridBox.Color;
 
 public class Assets {
 	
-	// main game texture atlas
-	private static TextureAtlas atlas;
+	/** Texture atlas for the game elements (grid) **/
+	private static TextureAtlas gridAtlas;
 	
+	/** Texture atlas for the game ui elements **/
+	private static TextureAtlas uiAtlas;
+	
+	/** Texture for the game background **/
 	private static Texture background;
+	
+	/** Texture for the blank grid **/
 	private static TextureRegion blank;
+	
+	/** Texture for the red grid **/
 	private static TextureRegion red;
+	
+	/** Texture for the blue grid **/
 	private static TextureRegion blue;
+	
+	/** Texture for the green grid **/
 	private static TextureRegion green;
+	
+	/** Texture for the yellow grid **/
 	private static TextureRegion yellow;
 	
-	// change button reference names here
-	private static Texture resetBtn;
-	private static Texture undoBtn;
-	private static Texture swapBtn;
-	private static Texture goldMoveBtn;
-	private static Texture silverMoveBtn;
-	private static Texture bronzeMoveBtn;
+	/** Texture for the reset button in the game screen **/
+	private static TextureRegion resetBtn;
 	
-	// change file names of the images here
+	/** Texture for the undo button in the game screen **/
+	private static TextureRegion undoBtn;
+	
+	/** Texture for the swap button in the game screen **/
+	private static TextureRegion swapBtn;
+	
+	/** Texture for the gold move label in the game screen **/
+	private static TextureRegion goldMoveBtn;
+	
+	/** Texture for the silver move label in the game screen **/
+	private static TextureRegion silverMoveBtn;
+	
+	/** Texture for the bronze move label in the game screen **/
+	private static TextureRegion bronzeMoveBtn;
+	
+	/** Texture for the game settings **/
+	private static TextureRegion gameSettings;
+	
+	/** File name of the blank image in the grid atlas **/
 	private static final String BLANK = "blank";
+	
+	/** File name of the red image in the grid atlas **/
 	private static final String RED = "red";
+	
+	/** File name of the blue image in the grid atlas **/
 	private static final String BLUE = "blue";
+	
+	/** File name of the green image in the grid atlas **/
 	private static final String GREEN = "green";
+	
+	/** File name of the yellow image in the grid atlas **/
 	private static final String YELLOW = "yellow";
+	
+	/** File name of the bronze move label in the ui atlas **/
+	private static final String MOVE_BRONZE = "move_bronze";
+	
+	/** File name of the gold move label in the ui atlas **/
+	private static final String MOVE_GOLD = "move_gold";
+	
+	/** File name of the silver move label in the ui atlas **/
+	private static final String MOVE_SILVER = "move_silver";
+	
+	/** File name of the game settings in the ui atlas **/
+	private static final String GAME_SETTINGS = "game_settings";
+	
+	/** File name of the reset in the ui atlas **/
+	private static final String RESET = "reset";
+	
+	/** File name of the swap in the ui atlas **/
+	private static final String SWAP = "swap";
+	
+	/** File name of the undo in the ui atlas **/
+	private static final String UNDO = "undo";
 	
 	/**
 	 * Call this method to load all necessary texture files and etc.
 	 */
 	public static void load() {
-		atlas = new TextureAtlas(Gdx.files.internal("textures/grid.pack"));
+		gridAtlas = new TextureAtlas(Gdx.files.internal("textures/grid.pack"));
+		uiAtlas = new TextureAtlas(Gdx.files.internal("ui/ui.pack"));
 		loadTextures();
 		loadUI();
 	}
@@ -47,50 +104,55 @@ public class Assets {
 	 */
 	private static void loadTextures() {
 		// load background
-		background = new Texture(Gdx.files.internal("textures/background_temp.png"));
+		background = new Texture(Gdx.files.internal("textures/background.png"));
 		
 		// load grid stuff
-		blank = atlas.findRegion(BLANK);
-		red = atlas.findRegion(RED);
-		blue = atlas.findRegion(BLUE);
-		green = atlas.findRegion(GREEN);
-		yellow = atlas.findRegion(YELLOW);
+		blank = gridAtlas.findRegion(BLANK);
+		red = gridAtlas.findRegion(RED);
+		blue = gridAtlas.findRegion(BLUE);
+		green = gridAtlas.findRegion(GREEN);
+		yellow = gridAtlas.findRegion(YELLOW);
 	}
 	
 	/**
 	 * Load all UI elements
 	 */
 	private static void loadUI() {
-		resetBtn = new Texture(Gdx.files.internal("ui/reset.png"));
-		goldMoveBtn = new Texture(Gdx.files.internal("ui/move_gold.png"));
-		silverMoveBtn = new Texture(Gdx.files.internal("ui/move_silver.png"));
-		bronzeMoveBtn = new Texture(Gdx.files.internal("ui/move_bronze.png"));
-		undoBtn = new Texture(Gdx.files.internal("ui/undo.png"));
-		swapBtn = new Texture(Gdx.files.internal("ui/swap.png"));
+		resetBtn = uiAtlas.findRegion(RESET);
+		goldMoveBtn = uiAtlas.findRegion(MOVE_GOLD);
+		silverMoveBtn = uiAtlas.findRegion(MOVE_SILVER);
+		bronzeMoveBtn = uiAtlas.findRegion(MOVE_BRONZE);
+		undoBtn = uiAtlas.findRegion(UNDO);
+		swapBtn = uiAtlas.findRegion(SWAP);
+		gameSettings = uiAtlas.findRegion(GAME_SETTINGS);
 	}
 	
-	public static Texture getUndoBtn() {
+	public static TextureRegion getUndoBtn() {
 		return undoBtn;
 	}
 	
-	public static Texture getSwapBtn() {
+	public static TextureRegion getSwapBtn() {
 		return swapBtn;
 	}
 	
-	public static Texture getResetBtn() {
+	public static TextureRegion getResetBtn() {
 		return resetBtn;
 	}
 	
-	public static Texture getGoldMoveBtn() {
+	public static TextureRegion getGoldMoveBtn() {
 		return goldMoveBtn;
 	}
 	
-	public static Texture getSilverMoveBtn() {
+	public static TextureRegion getSilverMoveBtn() {
 		return silverMoveBtn;
 	}
 	
-	public static Texture getBronzeMoveBtn() {
+	public static TextureRegion getBronzeMoveBtn() {
 		return bronzeMoveBtn;
+	}
+	
+	public static TextureRegion getGameSettingsBtn() {
+		return gameSettings;
 	}
 	
 	public static TextureRegion getColoredBox(Color color) {
@@ -120,12 +182,7 @@ public class Assets {
 	
 	public static void dispose() {
 		background.dispose();
-		atlas.dispose();
-		resetBtn.dispose();
-		undoBtn.dispose();
-		swapBtn.dispose();
-		goldMoveBtn.dispose();
-		silverMoveBtn.dispose();
-		bronzeMoveBtn.dispose();
+		gridAtlas.dispose();
+		uiAtlas.dispose();
 	}
 }
