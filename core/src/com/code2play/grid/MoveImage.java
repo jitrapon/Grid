@@ -34,7 +34,7 @@ public class MoveImage extends Image {
 			coinType = CoinType.SILVER;
 			setDrawable(silver);
 		}
-		else if (coinType != CoinType.BRONZE) {
+		else if (movesLeft < grid.getMinSilverMoves() && coinType != CoinType.BRONZE) {
 			coinType = CoinType.BRONZE;
 			setDrawable(bronze);
 		}
