@@ -1,0 +1,54 @@
+
+ui.png
+format: RGBA8888
+filter: MipMapLinearNearest,Nearest
+repeat: none
+move_bronze
+  rotate: false
+  xy: 1, 533
+  size: 400, 400
+  orig: 400, 400
+  offset: 0, 0
+  index: -1
+move_gold
+  rotate: false
+  xy: 1, 131
+  size: 400, 400
+  orig: 400, 400
+  offset: 0, 0
+  index: -1
+move_silver
+  rotate: false
+  xy: 403, 533
+  size: 400, 400
+  orig: 400, 400
+  offset: 0, 0
+  index: -1
+game_settings
+  rotate: false
+  xy: 1, 1
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+reset
+  rotate: false
+  xy: 403, 403
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+swap
+  rotate: false
+  xy: 805, 805
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+undo
+  rotate: false
+  xy: 131, 1
+  size: 128, 128
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
