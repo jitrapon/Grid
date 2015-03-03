@@ -11,7 +11,9 @@ import java.util.Iterator;
 import java.util.Map;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -28,6 +30,7 @@ import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
@@ -35,10 +38,11 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.utils.DragListener;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.code2play.grid.game.GameMode;
+import com.code2play.grid.game.GameState;
 import com.code2play.grid.game.Grid;
 import com.code2play.grid.game.GridBox;
-import com.code2play.grid.game.Swipe;
 import com.code2play.grid.game.GridBox.Color;
+import com.code2play.grid.game.Swipe;
 import com.code2play.grid.ui.MoveImage;
 import com.code2play.grid.ui.MoveLabel;
 import com.code2play.grid.ui.SwapLabel;
@@ -146,6 +150,9 @@ public class GameScreen implements Screen {
 	/** UI-swap button */
 	private Image swapBtn;
 
+	/** UI-settings button */
+	private Image settingsBtn;
+
 	/** UI-font for the gamescreen */
 	private BitmapFont moveBtnFont;
 
@@ -185,11 +192,18 @@ public class GameScreen implements Screen {
 	/** UI-swap label */
 	private SwapLabel swapLabel;
 
+	/** Parent Group for ui buttons 
+	 * (to easily manage enabling/disabling touch events **/
+	private Group btnGroup;
+
 	/** DEBUG: FPS Logger **/
 	private Label fpsLabel;
 
 	/** Force render once **/
 	private boolean forceRender = true;
+	
+	/** Whether or not game elements are responsive to touch events **/
+	private boolean isGamePlaying;
 
 	/**
 	 * Ctor of this game screen, using the Game object as game state information
@@ -208,7 +222,27 @@ public class GameScreen implements Screen {
 		initHUDStage(batch);
 		initGameStage(batch);							
 
+		// handle back button pressed on Android to show pause menu
+		InputProcessor backProcessor = new InputAdapter() {
+			@Override
+			public boolean keyDown(int keycode)
+			{
+				if (game.getCurrentState() == GameState.PLAYING) 
+					game.setGameState(GameState.PAUSED);
+				else if (game.getCurrentState() == GameState.PAUSED)
+					game.setGameState(GameState.PLAYING);
+				else {
+					game.actionResolver.showShortToast("Next back button will exit the game");
+					Gdx.input.setCatchBackKey(false);
+				}
+
+				return true;
+			}
+		};
+
+		inMultiplexer.addProcessor(backProcessor);
 		Gdx.input.setInputProcessor(inMultiplexer);
+		Gdx.input.setCatchBackKey(true);
 		game.actionResolver.showShortToast("Level " + grid.getLevel());
 	}
 
@@ -349,6 +383,25 @@ public class GameScreen implements Screen {
 		moveBtnLabel.addActor(moveBtn);
 		moveBtnLabel.addActor(moveLabel);
 
+		// initialize game settings button
+		settingsBtn = new Image(Assets.getGameSettingsBtn());
+		float settingsBtnScale = .8f;
+		settingsBtn.setOrigin(settingsBtn.getWidth()/2*settingsBtnScale, settingsBtn.getHeight()/2*settingsBtnScale);
+		settingsBtn.setBounds(20, hudStage.getHeight() - 120, settingsBtn.getWidth()*settingsBtnScale, 
+				settingsBtn.getHeight()*settingsBtnScale);
+		settingsBtn.addListener(new InputListener() {
+			public boolean touchDown (InputEvent event, float x, float y, int pointer, int button) {
+				return true;
+			}
+
+			// scene2d ui elements cannot be rotated
+			public void touchUp (InputEvent event, float x, float y, int pointer, int button) {
+				if (gridBoxClearAnimTime == 0f) {
+					game.setGameState(GameState.PAUSED);
+				}
+			}
+		});
+
 		// DEBUG: fps logger
 		if (game.showFPS) {
 			debugFont = new BitmapFont();
@@ -360,10 +413,14 @@ public class GameScreen implements Screen {
 		}
 
 		// add all actor and group to the stage
-		hudStage.addActor(resetBtn);
-		hudStage.addActor(moveBtnLabel);
-		hudStage.addActor(undoBtnLabel);
-		hudStage.addActor(swapBtnLabel);
+		btnGroup = new Group();
+		btnGroup.addActor(resetBtn);
+		btnGroup.addActor(moveBtnLabel);
+		btnGroup.addActor(undoBtnLabel);
+		btnGroup.addActor(swapBtnLabel);
+		btnGroup.addActor(settingsBtn);
+
+		hudStage.addActor(btnGroup);
 
 		// add this stage to the multiplexer
 		inMultiplexer.addProcessor(hudStage);
@@ -399,9 +456,9 @@ public class GameScreen implements Screen {
 	/**
 	 * Undo the current move and restore previous game state before the
 	 * move occured
+	 * //TODO
 	 */
 	private void undoMove() {
-		//TODO
 		grid.undoMove();
 	}
 
@@ -441,8 +498,12 @@ public class GameScreen implements Screen {
 			@Override
 			public void dragStart(
 					InputEvent event, float x, float y, int pointer) {
-				startDragX = x;
-				startDragY = y;
+				if (isGamePlaying) {
+					startDragX = x;
+					startDragY = y;
+				}
+				else 
+					this.cancel();
 			}
 
 			@Override
@@ -496,7 +557,7 @@ public class GameScreen implements Screen {
 				}
 			}
 		};
-		listener.setTapSquareSize(10);	// TODO change this to percentage of screen size
+		listener.setTapSquareSize(10);
 		gameStage.addListener(listener);
 
 		// set input processor 
@@ -559,6 +620,8 @@ public class GameScreen implements Screen {
 
 		case PLAYING:
 
+			setGameElementsTouchable(true);
+
 			// render grid for the first time
 			if (forceRender) {
 				drawGrid(grid);
@@ -571,7 +634,7 @@ public class GameScreen implements Screen {
 			// if there is a tap, then we don't process swipe direction events
 			// until the colored tile is tapped again
 			grid.updateGameState();
-			
+
 			// process input
 			if ( (swipeDir != null || grid.getNumColorGroups() > 0 || hasSwapped) 
 
@@ -647,20 +710,31 @@ public class GameScreen implements Screen {
 
 		case PAUSED:
 
+			setGameElementsTouchable(false);
+
+			gameStage.act(delta);
+			gameStage.draw();
+
+			if (game.showFPS)
+				fpsLabel.setText("FPS: " + Gdx.graphics.getFramesPerSecond());
+
+			hudStage.act(delta);
+			hudStage.draw();
+
+
 			break;
 
 		case GAMEOVER:
 
 			// update the gameStage and draw accordingly
 			// remove input processor 
-			if (inMultiplexer.getProcessors().contains(gameStage, false)) 
-				inMultiplexer.removeProcessor(gameStage);
-
-			if (inMultiplexer.getProcessors().contains(hudStage, false)) 
-				inMultiplexer.removeProcessor(hudStage);
+			setGameElementsTouchable(false);
 
 			gameStage.act(delta);
 			gameStage.draw();
+
+			if (game.showFPS)
+				fpsLabel.setText("FPS: " + Gdx.graphics.getFramesPerSecond());
 
 			hudStage.act(delta);
 			hudStage.draw();
@@ -670,19 +744,17 @@ public class GameScreen implements Screen {
 		case COMPLETE:
 
 			// update the gameStage and draw accordingly
-			// remove input processor 
-			if (inMultiplexer.getProcessors().contains(gameStage, false)) 
-				inMultiplexer.removeProcessor(gameStage);
-
-			if (inMultiplexer.getProcessors().contains(hudStage, false)) 
-				inMultiplexer.removeProcessor(hudStage);
+			setGameElementsTouchable(false);
 
 			gameStage.act(delta);
 			gameStage.draw();
 
+			if (game.showFPS)
+				fpsLabel.setText("FPS: " + Gdx.graphics.getFramesPerSecond());
+
 			hudStage.act(delta);
 			hudStage.draw();
-			
+
 			// if Continue is pressed, then end this screen
 			// and reloads the next level
 			// completed = true;
@@ -692,6 +764,28 @@ public class GameScreen implements Screen {
 		default:
 
 			break;
+		}
+	}
+
+	private void setGameElementsTouchable(boolean isTouchable) {
+		if (isTouchable) {
+			isGamePlaying = true;
+			if (gridGroup.getTouchable() == Touchable.disabled) 
+				gridGroup.setTouchable(Touchable.enabled);
+
+			if (btnGroup.getTouchable() == Touchable.disabled) {
+				btnGroup.setTouchable(Touchable.enabled);
+			}
+		}
+		else {
+			isGamePlaying = false;
+			if (gridGroup.getTouchable() == Touchable.enabled) 
+				gridGroup.setTouchable(Touchable.disabled);
+
+			if (btnGroup.getTouchable() == Touchable.enabled) {
+				btnGroup.setTouchable(Touchable.disabled);
+			}
+
 		}
 	}
 
@@ -907,6 +1001,7 @@ public class GameScreen implements Screen {
 		swapBtnFont.dispose();
 		if (debugFont != null) debugFont.dispose();
 		batch.dispose();
+		Gdx.input.setInputProcessor(null);
 		Gdx.app.log("DISPOSE", "GAMESCREEN DISPOSED");
 	}
 

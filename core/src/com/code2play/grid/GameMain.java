@@ -102,6 +102,10 @@ public class GameMain extends Game {
 	}
 
 	public void setGameState(GameState state) {
+		if (state == GameState.PAUSED) 
+			actionResolver.showShortToast("Game Paused");
+		else if (state == GameState.PLAYING)
+			actionResolver.showShortToast("Game Resumed");
 		gameState = state;
 	}
 
