@@ -1,4 +1,4 @@
-package com.code2play.grid;
+package com.code2play.grid.game;
 
 /**
  * Unit of grid. Contains data about each grid.

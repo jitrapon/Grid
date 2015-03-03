@@ -34,7 +34,15 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.utils.DragListener;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.code2play.grid.GridBox.Color;
+import com.code2play.grid.game.GameMode;
+import com.code2play.grid.game.Grid;
+import com.code2play.grid.game.GridBox;
+import com.code2play.grid.game.Swipe;
+import com.code2play.grid.game.GridBox.Color;
+import com.code2play.grid.ui.MoveImage;
+import com.code2play.grid.ui.MoveLabel;
+import com.code2play.grid.ui.SwapLabel;
+import com.code2play.grid.ui.UndoLabel;
 
 /**
  * Controls how the game elements are rendered onto the game application view.
@@ -182,12 +190,6 @@ public class GameScreen implements Screen {
 
 	/** Force render once **/
 	private boolean forceRender = true;
-
-
-	/** All the swipe directions for easy reference **/
-	enum Swipe {
-		UP, LEFT, RIGHT, DOWN;
-	}
 
 	/**
 	 * Ctor of this game screen, using the Game object as game state information

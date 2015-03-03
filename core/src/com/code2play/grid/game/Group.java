@@ -1,7 +1,7 @@
-package com.code2play.grid;
+package com.code2play.grid.game;
 
 import com.badlogic.gdx.utils.Array;
-import com.code2play.grid.GridBox.Color;
+import com.code2play.grid.game.GridBox.Color;
 
 public class Group extends Array<Object> {
 	

@@ -1,4 +1,4 @@
-package com.code2play.grid;
+package com.code2play.grid.game;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,8 +6,9 @@ import java.util.Random;
 
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Array;
-import com.code2play.grid.GameScreen.Swipe;
-import com.code2play.grid.GridBox.Color;
+import com.code2play.grid.GameMain;
+import com.code2play.grid.game.Swipe;
+import com.code2play.grid.game.GridBox.Color;
 
 /**
  * Initialization and storing grid information

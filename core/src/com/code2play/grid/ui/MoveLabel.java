@@ -1,6 +1,7 @@
-package com.code2play.grid;
+package com.code2play.grid.ui;
 
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.code2play.grid.game.Grid;
 
 public class MoveLabel extends Label {
 

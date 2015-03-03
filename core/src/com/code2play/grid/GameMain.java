@@ -3,6 +3,9 @@ package com.code2play.grid;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
+import com.code2play.grid.game.GameMode;
+import com.code2play.grid.game.GameState;
+import com.code2play.grid.game.Grid;
 
 public class GameMain extends Game {
 

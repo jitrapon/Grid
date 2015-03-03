@@ -1,9 +1,11 @@
-package com.code2play.grid;
+package com.code2play.grid.ui;
 
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.code2play.grid.game.CoinType;
+import com.code2play.grid.game.Grid;
 
 public class MoveImage extends Image {
 	
