@@ -10,9 +10,11 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 
 public class BlurImage extends Image {
 
-	private ShaderProgram shader;
+	private ShaderProgram blurShader;
+	private ShaderProgram overlayShader;
 
 	private static final float MAX_BLUR = 14f;
+	private static final float GREY_SCALE = 5.0f;
 
 	private FrameBuffer fboA;
 	private FrameBuffer fboB;
@@ -20,10 +22,11 @@ public class BlurImage extends Image {
 	boolean run;
 
 
-	public BlurImage(TextureRegion region, ShaderProgram blurShader, FrameBuffer fboA,
+	public BlurImage(TextureRegion region, ShaderProgram blurShader, ShaderProgram overlayShader, FrameBuffer fboA,
 			FrameBuffer fboB) {
 		super(region);
-		shader = blurShader;
+		this.blurShader = blurShader;
+		this.overlayShader = overlayShader;
 		this.fboA = fboA;
 		this.fboB = fboB;
 	}
@@ -31,15 +34,15 @@ public class BlurImage extends Image {
 	@Override
 	public void draw(Batch batch, float parentAlpha) {
 		if (!run) {
-			batch.setShader(shader);
+			batch.setShader(blurShader);
 
-			shader.setUniformf("resolution", Gdx.graphics.getHeight());
+			blurShader.setUniformf("resolution", Gdx.graphics.getHeight());
 
 			//apply the blur only along Y-axis
-			shader.setUniformf("dir", 0f, 1f);
+			blurShader.setUniformf("dir", 0f, 1f);
 
 			// set blur radius on x-ais
-			shader.setUniformf("radius", MAX_BLUR);
+			blurShader.setUniformf("radius", MAX_BLUR);
 
 			fboA.begin();
 			// 'record' the drawing onto this temp fbo
@@ -54,9 +57,9 @@ public class BlurImage extends Image {
 			this.setDrawable(new TextureRegionDrawable(region));
 			
 			//apply the blur only along Y-axis
-			shader.begin();
-			shader.setUniformf("dir", 1f, 0f);
-			shader.end();
+			blurShader.begin();
+			blurShader.setUniformf("dir", 1f, 0f);
+			blurShader.end();
 			
 			fboB.begin();
 			// 'record' the drawing onto this temp fbo
@@ -67,7 +70,6 @@ public class BlurImage extends Image {
 			fboB.end();
 			
 			region = new TextureRegion(fboB.getColorBufferTexture());
-//			region.flip(false, true);
 			this.setDrawable(new TextureRegionDrawable(region));
 			batch.begin();
 			super.draw(batch, parentAlpha);

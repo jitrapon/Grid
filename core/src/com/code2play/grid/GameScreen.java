@@ -181,7 +181,7 @@ public class GameScreen implements Screen {
 
 	/** Swap button font parameter **/
 	private FreeTypeFontParameter swapBtnFontParam;
-	
+
 	/*
 	 * COLORS
 	 */
@@ -191,12 +191,9 @@ public class GameScreen implements Screen {
 
 	/** Undo/Swap Button Font color **/
 	private final String vanillaFontColor = "FFF1bF";
-	
+
 	/** Blank box tint **/
 	private final String blankBoxColor = "9AA096";
-	
-	/** POPUP overlay color **/
-	private final String overlayColor = "5C5A5B";
 
 	/** UI-move label */
 	private MoveLabel moveLabel;
@@ -230,10 +227,14 @@ public class GameScreen implements Screen {
 	private FrameBuffer blurTargetA;
 
 	private FrameBuffer blurTargetB;
-	
+
 	private FrameBuffer blurTargetC;
-	
+
+	/** Shader program to blur screen **/
 	ShaderProgram blurShader;
+
+	/** Shader program to grey screen **/
+	ShaderProgram overlayShader;
 
 	TextureRegion fboRegion;
 
@@ -244,18 +245,18 @@ public class GameScreen implements Screen {
 					"attribute vec4 "+ShaderProgram.COLOR_ATTRIBUTE+";\n" +
 					"attribute vec2 "+ShaderProgram.TEXCOORD_ATTRIBUTE+"0;\n" +
 
-			"uniform mat4 u_projTrans;\n" + 
-			" \n" + 
-			"varying vec4 vColor;\n" +
-			"varying vec2 vTexCoord;\n" +
+					"uniform mat4 u_projTrans;\n" + 
+					" \n" + 
+					"varying vec4 vColor;\n" +
+					"varying vec2 vTexCoord;\n" +
 
-			"void main() {\n" +  
-			"	vColor = "+ShaderProgram.COLOR_ATTRIBUTE+";\n" +
-			"	vTexCoord = "+ShaderProgram.TEXCOORD_ATTRIBUTE+"0;\n" +
-			"	gl_Position =  u_projTrans * " + ShaderProgram.POSITION_ATTRIBUTE + ";\n" +
-			"}";
+					"void main() {\n" +  
+					"	vColor = "+ShaderProgram.COLOR_ATTRIBUTE+";\n" +
+					"	vTexCoord = "+ShaderProgram.TEXCOORD_ATTRIBUTE+"0;\n" +
+					"	gl_Position =  u_projTrans * " + ShaderProgram.POSITION_ATTRIBUTE + ";\n" +
+					"}";
 
-	final String FRAG =
+	final String BLUR_FRAG =
 			"#ifdef GL_ES\n" + 
 					"#define LOWP lowp\n" + 
 					"precision mediump float;\n" + 
@@ -292,6 +293,26 @@ public class GameScreen implements Screen {
 					"\n" + 
 					"	gl_FragColor = vColor * vec4(sum.rgb, 1.0);\n" + 
 					"}";
+
+	final String GREY_FRAG =
+			"#ifdef GL_ES\n" //
+			+ "#define LOWP lowp\n" //
+			+ "precision mediump float;\n" //
+			+ "#else\n" //
+			+ "#define LOWP \n" //
+			+ "#endif\n" + //
+			"varying LOWP vec4 vColor;\n" +
+			"varying vec2 vTexCoord;\n" +
+			"uniform sampler2D u_texture;\n" +                     
+			"uniform float grayscale;\n" +
+			"void main() {\n" +  
+			"       vec4 texColor = texture2D(u_texture, vTexCoord);\n" +
+			"       \n" +
+			"       float gray = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));\n" +
+			"       texColor.rgb = mix(vec3(gray), texColor.rgb, grayscale);\n" +
+			"       \n" +
+			"       gl_FragColor = texColor * vColor;\n" +
+			"}";
 
 	/**
 	 * Ctor of this game screen, using the Game object as game state information
@@ -344,6 +365,16 @@ public class GameScreen implements Screen {
 				return true;
 			}
 		};
+
+		// compile shader programs
+		// important since we aren't using some uniforms and attributes that SpriteBatch expects
+		ShaderProgram.pedantic = false;
+
+		// initializes blur shader program
+		blurShader = new ShaderProgram(VERT, BLUR_FRAG);
+
+		// initialize grey shader program
+		overlayShader = new ShaderProgram(VERT, GREY_FRAG);
 
 		inMultiplexer.addProcessor(backProcessor);
 		Gdx.input.setInputProcessor(inMultiplexer);
@@ -506,7 +537,7 @@ public class GameScreen implements Screen {
 				}
 			}
 		});
-		
+
 		// DEBUG: fps logger
 		if (game.showFPS) {
 			debugFont = new BitmapFont();
@@ -710,14 +741,23 @@ public class GameScreen implements Screen {
 
 	private TextureRegion getBlurredScreenshotTexture() {
 
-		//Create a frame buffer.
+		//Create a frame buffer that is 25% of the original screen
 		int fbWidth = Gdx.graphics.getWidth()/4;
 		int fbHeight = Gdx.graphics.getHeight()/4;
 
+		// initialize necessary fbo's 
 		blurTargetA = new FrameBuffer(Pixmap.Format.RGBA8888, fbWidth, fbHeight, false);
 		blurTargetB = new FrameBuffer(Pixmap.Format.RGBA8888, fbWidth, fbHeight, false);
 		blurTargetC = new FrameBuffer(Pixmap.Format.RGBA8888, fbWidth, fbHeight, false);
+		
+		// setup default uniforms for the overlay shader
+		overlayShader.begin();
+		overlayShader.setUniformf("grayscale", .3f);
+		overlayShader.end();
 
+		// begin drawing onto the first fbo
+		// this fbo contains original unaltered screen
+		batch.setShader(overlayShader);
 		blurTargetA.begin();
 
 		Gdx.gl20.glClearColor(0f, 0.0f, 0.5f, 0.0f);
@@ -732,6 +772,7 @@ public class GameScreen implements Screen {
 		//		Pixmap orig = ScreenshotFactory.getScreenshot(0, 0, 
 		//				Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
 		blurTargetA.end();
+		batch.setShader(null);
 
 		//		int origWidth = orig.getWidth();
 		//		int origHeight = orig.getHeight();
@@ -746,22 +787,16 @@ public class GameScreen implements Screen {
 		//				0, 0, origWidth/4, origHeight/4,
 		//				blurRadius, iterations, true);
 
-		//important since we aren't using some uniforms and attributes that SpriteBatch expects
-		ShaderProgram.pedantic = false;
-
-		if (blurShader == null)
-			blurShader = new ShaderProgram(VERT, FRAG);
-
-		// setup default uniforms for our shader
+		// setup default uniforms for the blur shader
 		blurShader.begin();
-		blurShader.setUniformf("dir", 0f, 0f);			// X-axis first
+		blurShader.setUniformf("dir", 0f, 0f);
 		blurShader.setUniformf("radius", 1f);
 		blurShader.end();
 
 		// upload the blurred texture to GL
 		screenTexture = blurTargetA.getColorBufferTexture();
-//		screenTexture.setFilter(TextureFilter.Linear, TextureFilter.Linear);
-//		screenTexture.setWrap(TextureWrap.Repeat, TextureWrap.Repeat);
+		//		screenTexture.setFilter(TextureFilter.Linear, TextureFilter.Linear);
+		//		screenTexture.setWrap(TextureWrap.Repeat, TextureWrap.Repeat);
 
 		fboRegion = new TextureRegion(screenTexture);
 		fboRegion.flip(false, true);
@@ -890,7 +925,7 @@ public class GameScreen implements Screen {
 			// blur the current screen
 			if (!hasBlurred) {
 				screen = getBlurredScreenshotTexture();
-				screenshot = new BlurImage(screen, blurShader, blurTargetB, blurTargetC);
+				screenshot = new BlurImage(screen, blurShader, overlayShader, blurTargetB, blurTargetC);
 				com.badlogic.gdx.graphics.Color c = screenshot.getColor();
 				screenshot.setColor(c.r, c.g, c.b, 0f);
 				screenshot.addAction(
@@ -1189,7 +1224,8 @@ public class GameScreen implements Screen {
 		undoBtnFont.dispose();
 		swapBtnFont.dispose();
 		if (debugFont != null) debugFont.dispose();
-		if (blurShader != null) blurShader.dispose();
+		blurShader.dispose();
+		overlayShader.dispose();
 		batch.dispose();
 		if (blurTargetA != null) blurTargetA.dispose();
 		if (blurTargetB != null) blurTargetB.dispose();
