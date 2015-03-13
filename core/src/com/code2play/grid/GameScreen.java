@@ -17,12 +17,16 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
+import com.badlogic.gdx.graphics.glutils.FrameBuffer;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.Interpolation;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
@@ -43,6 +47,7 @@ import com.code2play.grid.game.Grid;
 import com.code2play.grid.game.GridBox;
 import com.code2play.grid.game.GridBox.Color;
 import com.code2play.grid.game.Swipe;
+import com.code2play.grid.ui.BlurImage;
 import com.code2play.grid.ui.MoveImage;
 import com.code2play.grid.ui.MoveLabel;
 import com.code2play.grid.ui.SwapLabel;
@@ -176,12 +181,22 @@ public class GameScreen implements Screen {
 
 	/** Swap button font parameter **/
 	private FreeTypeFontParameter swapBtnFontParam;
+	
+	/*
+	 * COLORS
+	 */
 
 	/** Move Button Font color **/
 	private final String moveBtnFontColor = "FF5656";
 
 	/** Undo/Swap Button Font color **/
 	private final String vanillaFontColor = "FFF1bF";
+	
+	/** Blank box tint **/
+	private final String blankBoxColor = "9AA096";
+	
+	/** POPUP overlay color **/
+	private final String overlayColor = "5C5A5B";
 
 	/** UI-move label */
 	private MoveLabel moveLabel;
@@ -201,9 +216,82 @@ public class GameScreen implements Screen {
 
 	/** Force render once **/
 	private boolean forceRender = true;
-	
+
 	/** Whether or not game elements are responsive to touch events **/
 	private boolean isGamePlaying;
+
+	/** Temporary holder for screenshot texture to display as blurred **/
+	private TextureRegion screen;
+
+	/** Screenshot display image **/
+	private Image screenshot;
+
+	/** Framebuffer to store screenshot **/
+	private FrameBuffer blurTargetA;
+
+	private FrameBuffer blurTargetB;
+	
+	private FrameBuffer blurTargetC;
+	
+	ShaderProgram blurShader;
+
+	TextureRegion fboRegion;
+
+	Texture screenTexture;
+
+	final String VERT =  
+			"attribute vec4 "+ShaderProgram.POSITION_ATTRIBUTE+";\n" +
+					"attribute vec4 "+ShaderProgram.COLOR_ATTRIBUTE+";\n" +
+					"attribute vec2 "+ShaderProgram.TEXCOORD_ATTRIBUTE+"0;\n" +
+
+			"uniform mat4 u_projTrans;\n" + 
+			" \n" + 
+			"varying vec4 vColor;\n" +
+			"varying vec2 vTexCoord;\n" +
+
+			"void main() {\n" +  
+			"	vColor = "+ShaderProgram.COLOR_ATTRIBUTE+";\n" +
+			"	vTexCoord = "+ShaderProgram.TEXCOORD_ATTRIBUTE+"0;\n" +
+			"	gl_Position =  u_projTrans * " + ShaderProgram.POSITION_ATTRIBUTE + ";\n" +
+			"}";
+
+	final String FRAG =
+			"#ifdef GL_ES\n" + 
+					"#define LOWP lowp\n" + 
+					"precision mediump float;\n" + 
+					"#else\n" + 
+					"#define LOWP \n" + 
+					"#endif\n" + 
+					"varying LOWP vec4 vColor;\n" + 
+					"varying vec2 vTexCoord;\n" + 
+					"\n" + 
+					"uniform sampler2D u_texture;\n" + 
+					"uniform float resolution;\n" + 
+					"uniform float radius;\n" + 
+					"uniform vec2 dir;\n" + 
+					"\n" + 
+					"void main() {\n" + 
+					"	vec4 sum = vec4(0.0);\n" + 
+					"	vec2 tc = vTexCoord;\n" + 
+					"	float blur = radius/resolution; \n" + 
+					"    \n" + 
+					"    float hstep = dir.x;\n" + 
+					"    float vstep = dir.y;\n" + 
+					"    \n" +
+					"	sum += texture2D(u_texture, vec2(tc.x - 4.0*blur*hstep, tc.y - 4.0*blur*vstep)) * 0.05;\n" + 
+					"	sum += texture2D(u_texture, vec2(tc.x - 3.0*blur*hstep, tc.y - 3.0*blur*vstep)) * 0.09;\n" + 
+					"	sum += texture2D(u_texture, vec2(tc.x - 2.0*blur*hstep, tc.y - 2.0*blur*vstep)) * 0.12;\n" + 
+					"	sum += texture2D(u_texture, vec2(tc.x - 1.0*blur*hstep, tc.y - 1.0*blur*vstep)) * 0.15;\n" + 
+					"	\n" + 
+					"	sum += texture2D(u_texture, vec2(tc.x, tc.y)) * 0.16;\n" + 
+					"	\n" + 
+					"	sum += texture2D(u_texture, vec2(tc.x + 1.0*blur*hstep, tc.y + 1.0*blur*vstep)) * 0.15;\n" + 
+					"	sum += texture2D(u_texture, vec2(tc.x + 2.0*blur*hstep, tc.y + 2.0*blur*vstep)) * 0.12;\n" + 
+					"	sum += texture2D(u_texture, vec2(tc.x + 3.0*blur*hstep, tc.y + 3.0*blur*vstep)) * 0.09;\n" + 
+					"	sum += texture2D(u_texture, vec2(tc.x + 4.0*blur*hstep, tc.y + 4.0*blur*vstep)) * 0.05;\n" + 
+					"\n" + 
+					"	gl_FragColor = vColor * vec4(sum.rgb, 1.0);\n" + 
+					"}";
 
 	/**
 	 * Ctor of this game screen, using the Game object as game state information
@@ -224,13 +312,30 @@ public class GameScreen implements Screen {
 
 		// handle back button pressed on Android to show pause menu
 		InputProcessor backProcessor = new InputAdapter() {
+
 			@Override
 			public boolean keyDown(int keycode)
 			{
 				if (game.getCurrentState() == GameState.PLAYING) 
 					game.setGameState(GameState.PAUSED);
-				else if (game.getCurrentState() == GameState.PAUSED)
+				else if (game.getCurrentState() == GameState.PAUSED) {
+					if (hasBlurred) {
+						screenshot.remove();
+						screenshot = null;
+						if (screenTexture != null) 
+							screenTexture.dispose();
+
+						//						screenshot.addAction(
+						//									alpha(1f, .3f, Interpolation.linear)
+						//								);
+						blurTargetA.dispose();
+						blurTargetB.dispose();
+						blurTargetC.dispose();
+						hasBlurred = false;
+					}
+
 					game.setGameState(GameState.PLAYING);
+				}
 				else {
 					game.actionResolver.showShortToast("Next back button will exit the game");
 					Gdx.input.setCatchBackKey(false);
@@ -401,7 +506,7 @@ public class GameScreen implements Screen {
 				}
 			}
 		});
-
+		
 		// DEBUG: fps logger
 		if (game.showFPS) {
 			debugFont = new BitmapFont();
@@ -583,6 +688,8 @@ public class GameScreen implements Screen {
 		for (int col = 0; col < grid.getHeight(); col++) {
 			for (int row = 0; row < grid.getWidth(); row++) {
 				Image blankBox = new Image( Assets.getBlankBox() );
+				com.badlogic.gdx.graphics.Color c = parseColor(blankBoxColor);
+				blankBox.setColor(c.r, c.g, c.b, .22f);
 				blankBox.setSize(boxWidth, boxHeight);
 				float x = (widthMargin+widthSpacing) + ((boxWidth+widthSpacing)*row);
 				float y = (startingHeight-heightSpacing-boxHeight) - ((boxHeight+heightSpacing)*col);
@@ -601,10 +708,75 @@ public class GameScreen implements Screen {
 		return grid.getNumSwapsLeft();
 	}
 
+	private TextureRegion getBlurredScreenshotTexture() {
+
+		//Create a frame buffer.
+		int fbWidth = Gdx.graphics.getWidth()/4;
+		int fbHeight = Gdx.graphics.getHeight()/4;
+
+		blurTargetA = new FrameBuffer(Pixmap.Format.RGBA8888, fbWidth, fbHeight, false);
+		blurTargetB = new FrameBuffer(Pixmap.Format.RGBA8888, fbWidth, fbHeight, false);
+		blurTargetC = new FrameBuffer(Pixmap.Format.RGBA8888, fbWidth, fbHeight, false);
+
+		blurTargetA.begin();
+
+		Gdx.gl20.glClearColor(0f, 0.0f, 0.5f, 0.0f);
+		Gdx.gl20.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+		gameStage.draw();
+		hudStage.draw();
+
+		//		screenTexture = blurTargetA.getColorBufferTexture();
+
+		//		// get the screenshot of the current framebuffer
+		//		Pixmap orig = ScreenshotFactory.getScreenshot(0, 0, 
+		//				Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
+		blurTargetA.end();
+
+		//		int origWidth = orig.getWidth();
+		//		int origHeight = orig.getHeight();
+		//
+		//		// blur parameters
+		//		int blurRadius = 4;
+		//		int iterations = 3;
+		//
+		//		// blur the image at 25% of original size
+		//		// also specify disposePixmap=true to dispose the original Pixmap
+		//		Pixmap blurred = BlurUtils.blur(orig, 0, 0, origWidth, origHeight,
+		//				0, 0, origWidth/4, origHeight/4,
+		//				blurRadius, iterations, true);
+
+		//important since we aren't using some uniforms and attributes that SpriteBatch expects
+		ShaderProgram.pedantic = false;
+
+		if (blurShader == null)
+			blurShader = new ShaderProgram(VERT, FRAG);
+
+		// setup default uniforms for our shader
+		blurShader.begin();
+		blurShader.setUniformf("dir", 0f, 0f);			// X-axis first
+		blurShader.setUniformf("radius", 1f);
+		blurShader.end();
+
+		// upload the blurred texture to GL
+		screenTexture = blurTargetA.getColorBufferTexture();
+//		screenTexture.setFilter(TextureFilter.Linear, TextureFilter.Linear);
+//		screenTexture.setWrap(TextureWrap.Repeat, TextureWrap.Repeat);
+
+		fboRegion = new TextureRegion(screenTexture);
+		fboRegion.flip(false, true);
+
+		//dispose blur after uploading
+		//		blurred.dispose();
+
+		return fboRegion;
+	}
+
 	float deltaTime = 0f;
 	Swipe prevSwipeDir = null;
 	int prevMovesLeft = -1;
 	boolean justSwiped = false;
+	boolean hasBlurred = false;
 	@Override
 	/**
 	 * Calls upon World instance to update its entities, then 
@@ -619,6 +791,8 @@ public class GameScreen implements Screen {
 		switch(game.getCurrentState()) {
 
 		case PLAYING:
+
+			batch.setShader(null);
 
 			setGameElementsTouchable(true);
 
@@ -710,17 +884,32 @@ public class GameScreen implements Screen {
 
 		case PAUSED:
 
+			// disable input events ui buttons and game elements
 			setGameElementsTouchable(false);
+
+			// blur the current screen
+			if (!hasBlurred) {
+				screen = getBlurredScreenshotTexture();
+				screenshot = new BlurImage(screen, blurShader, blurTargetB, blurTargetC);
+				com.badlogic.gdx.graphics.Color c = screenshot.getColor();
+				screenshot.setColor(c.r, c.g, c.b, 0f);
+				screenshot.addAction(
+						alpha(1f, .2f, Interpolation.linear)
+						);
+
+				screenshot.setBounds(0, 0, hudStage.getWidth(), hudStage.getHeight());
+				hudStage.addActor(screenshot);
+				hasBlurred = true;
+			}
 
 			gameStage.act(delta);
 			gameStage.draw();
 
-			if (game.showFPS)
-				fpsLabel.setText("FPS: " + Gdx.graphics.getFramesPerSecond());
-
 			hudStage.act(delta);
 			hudStage.draw();
 
+			if (game.showFPS)
+				fpsLabel.setText("FPS: " + Gdx.graphics.getFramesPerSecond());
 
 			break;
 
@@ -1000,7 +1189,11 @@ public class GameScreen implements Screen {
 		undoBtnFont.dispose();
 		swapBtnFont.dispose();
 		if (debugFont != null) debugFont.dispose();
+		if (blurShader != null) blurShader.dispose();
 		batch.dispose();
+		if (blurTargetA != null) blurTargetA.dispose();
+		if (blurTargetB != null) blurTargetB.dispose();
+		if (blurTargetC != null) blurTargetB.dispose();
 		Gdx.input.setInputProcessor(null);
 		Gdx.app.log("DISPOSE", "GAMESCREEN DISPOSED");
 	}
