@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.code2play.grid.game.GridBox.Color;
 
 public class Assets {
@@ -89,6 +90,9 @@ public class Assets {
 	/** File name of the undo in the ui atlas **/
 	private static final String UNDO = "undo";
 	
+	/** Default skin **/
+	private static Skin skin;
+	
 	/**
 	 * Call this method to load all necessary texture files and etc.
 	 */
@@ -125,6 +129,12 @@ public class Assets {
 		undoBtn = uiAtlas.findRegion(UNDO);
 		swapBtn = uiAtlas.findRegion(SWAP);
 		gameSettings = uiAtlas.findRegion(GAME_SETTINGS);
+		
+		skin = new Skin(Gdx.files.internal("ui/uiskin.json"));
+	}
+	
+	public static Skin getSkin() {
+		return skin;
 	}
 	
 	public static TextureRegion getUndoBtn() {
@@ -181,6 +191,7 @@ public class Assets {
 	}
 	
 	public static void dispose() {
+		skin.dispose();
 		background.dispose();
 		gridAtlas.dispose();
 		uiAtlas.dispose();

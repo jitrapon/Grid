@@ -3,14 +3,17 @@ package com.code2play.grid;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.alpha;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.moveTo;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.parallel;
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.removeActor;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.rotateBy;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.scaleTo;
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.sequence;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.InputProcessor;
@@ -35,10 +38,10 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
+import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
-import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.utils.DragListener;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.code2play.grid.game.GameMode;
@@ -102,9 +105,6 @@ public class GameScreen implements Screen {
 
 	/** Grid instance that contains all underlying data structure of the grid **/
 	private Grid grid;
-
-	/** Skin of the rendered objects onscreen **/
-	private Skin skin;	//TODO
 
 	/** Calculated coordinates of all the grid boxes for easy reference **/
 	private Map<Integer, Vector2> gridCoordinates;
@@ -231,14 +231,19 @@ public class GameScreen implements Screen {
 	private FrameBuffer blurTargetC;
 
 	/** Shader program to blur screen **/
-	ShaderProgram blurShader;
+	private ShaderProgram blurShader;
 
 	/** Shader program to grey screen **/
-	ShaderProgram overlayShader;
+	private ShaderProgram overlayShader;
 
-	TextureRegion fboRegion;
+	/** Frame buffer for storing game screen capture **/
+	private TextureRegion fboRegion;
 
-	Texture screenTexture;
+	/** Texture of the screenshot **/
+	private Texture screenTexture;
+
+	/** Popup dialog for the pause menu **/
+	private Dialog pauseMenu;
 
 	final String VERT =  
 			"attribute vec4 "+ShaderProgram.POSITION_ATTRIBUTE+";\n" +
@@ -337,29 +342,18 @@ public class GameScreen implements Screen {
 			@Override
 			public boolean keyDown(int keycode)
 			{
-				if (game.getCurrentState() == GameState.PLAYING) 
-					game.setGameState(GameState.PAUSED);
-				else if (game.getCurrentState() == GameState.PAUSED) {
-					if (hasBlurred) {
-						screenshot.remove();
-						screenshot = null;
-						if (screenTexture != null) 
-							screenTexture.dispose();
-
-						//						screenshot.addAction(
-						//									alpha(1f, .3f, Interpolation.linear)
-						//								);
-						blurTargetA.dispose();
-						blurTargetB.dispose();
-						blurTargetC.dispose();
-						hasBlurred = false;
+				if (keycode == Keys.BACK) {
+					Gdx.app.log("BACKKEY", "Pressed");
+					if (game.getCurrentState() == GameState.PLAYING) 
+						game.setGameState(GameState.PAUSED);
+					else if (game.getCurrentState() == GameState.PAUSED) {
+						hidePauseMenu();
+						game.setGameState(GameState.PLAYING);
 					}
-
-					game.setGameState(GameState.PLAYING);
-				}
-				else {
-					game.actionResolver.showShortToast("Next back button will exit the game");
-					Gdx.input.setCatchBackKey(false);
+					else {
+						game.actionResolver.showShortToast("Next back button will exit the game");
+						Gdx.input.setCatchBackKey(false);
+					}
 				}
 
 				return true;
@@ -388,9 +382,10 @@ public class GameScreen implements Screen {
 	private void initHUDStage(Batch batch) {
 		// create a new HUD stage to hold for buttons
 		hudStage = new Stage( new ExtendViewport(width, height, maxWidth, maxHeight, camera), batch );
+		Gdx.app.log("Stage", "Setting up HUD stage of size " + hudStage.getWidth() + " by " + 
+				hudStage.getHeight());
 
 		// initialize RESET button
-		skin = new Skin();
 		resetBtn = new Image(Assets.getResetBtn());
 		float resetBtnScale = 0.8f;
 		resetBtn.setOrigin(resetBtn.getWidth()/2*resetBtnScale, resetBtn.getHeight()/2*resetBtnScale);
@@ -548,6 +543,37 @@ public class GameScreen implements Screen {
 			hudStage.addActor(fpsLabel);
 		}
 
+		// initialize pause menu dialog
+		Assets.getSkin().getFont("default-font").setScale(3f);
+		pauseMenu = new Dialog("PAUSE", Assets.getSkin(), "default") {
+
+			protected void result(Object object) {
+				String cmd = (String) object;
+				Gdx.app.log("PAUSE", "Chosen: " + object);
+				if (cmd.equals("level_select"))
+					return;
+				else if (cmd.equals("resume")) {
+					hidePauseMenu();
+					game.setGameState(GameState.PLAYING);
+				}
+				else if (cmd.equals("settings"))
+					return;
+			}
+		};
+		
+		float btnHeight = hudStage.getHeight()*.1f;
+		float btnWidth = hudStage.getWidth()*.8f;
+		
+		pauseMenu.getButtonTable().row().width(btnWidth).height(btnHeight);
+		pauseMenu.button("Level Menu", "level_select");
+		pauseMenu.getButtonTable().row().width(btnWidth).height(btnHeight);
+		pauseMenu.button("Settings", "settings");
+		pauseMenu.getButtonTable().row().width(btnWidth).height(btnHeight);
+		pauseMenu.button("Resume", "resume"); 
+		
+		pauseMenu.setModal(true);
+		pauseMenu.setMovable(false);
+
 		// add all actor and group to the stage
 		btnGroup = new Group();
 		btnGroup.addActor(resetBtn);
@@ -560,6 +586,8 @@ public class GameScreen implements Screen {
 
 		// add this stage to the multiplexer
 		inMultiplexer.addProcessor(hudStage);
+		
+		Gdx.app.log("Stage", "HUD stage initialized");
 	}
 
 	private static com.badlogic.gdx.graphics.Color parseColor(String hex) {  
@@ -604,6 +632,8 @@ public class GameScreen implements Screen {
 	 */
 	private void initGameStage(Batch batch) {
 		gameStage = new Stage( new ExtendViewport(width, height, maxWidth, maxHeight, camera), batch );
+		Gdx.app.log("Stage", "Setting up game stage of size " + gameStage.getWidth() + " x " + 
+				gameStage.getHeight());
 		gridCoordinates = new HashMap<Integer, Vector2>();
 		firstSwapID = -1;
 		secondSwapID = -1;
@@ -698,6 +728,7 @@ public class GameScreen implements Screen {
 
 		// set input processor 
 		inMultiplexer.addProcessor(gameStage);
+		Gdx.app.log("Stage", "Game stage initialized");
 	}
 
 
@@ -749,7 +780,7 @@ public class GameScreen implements Screen {
 		blurTargetA = new FrameBuffer(Pixmap.Format.RGBA8888, fbWidth, fbHeight, false);
 		blurTargetB = new FrameBuffer(Pixmap.Format.RGBA8888, fbWidth, fbHeight, false);
 		blurTargetC = new FrameBuffer(Pixmap.Format.RGBA8888, fbWidth, fbHeight, false);
-		
+
 		// setup default uniforms for the overlay shader
 		overlayShader.begin();
 		overlayShader.setUniformf("grayscale", .3f);
@@ -828,7 +859,7 @@ public class GameScreen implements Screen {
 		case PLAYING:
 
 			batch.setShader(null);
-
+			cleanup();
 			setGameElementsTouchable(true);
 
 			// render grid for the first time
@@ -922,20 +953,8 @@ public class GameScreen implements Screen {
 			// disable input events ui buttons and game elements
 			setGameElementsTouchable(false);
 
-			// blur the current screen
-			if (!hasBlurred) {
-				screen = getBlurredScreenshotTexture();
-				screenshot = new BlurImage(screen, blurShader, overlayShader, blurTargetB, blurTargetC);
-				com.badlogic.gdx.graphics.Color c = screenshot.getColor();
-				screenshot.setColor(c.r, c.g, c.b, 0f);
-				screenshot.addAction(
-						alpha(1f, .2f, Interpolation.linear)
-						);
-
-				screenshot.setBounds(0, 0, hudStage.getWidth(), hudStage.getHeight());
-				hudStage.addActor(screenshot);
-				hasBlurred = true;
-			}
+			// display popup dialog as pause menu
+			showPauseMenu();
 
 			gameStage.act(delta);
 			gameStage.draw();
@@ -991,6 +1010,73 @@ public class GameScreen implements Screen {
 		}
 	}
 
+	/**
+	 * Displays the pause menu and blurs the screen
+	 */
+	private void showPauseMenu() {
+		if (!hasBlurred) {
+
+			// blur the screen with greyscale tint
+			screen = getBlurredScreenshotTexture();
+			screenshot = new BlurImage(screen, blurShader, overlayShader, blurTargetB, blurTargetC);
+			com.badlogic.gdx.graphics.Color c = screenshot.getColor();
+			screenshot.setColor(c.r, c.g, c.b, 0f);
+			screenshot.addAction(
+					alpha(1f, .2f, Interpolation.linear)
+					);
+
+			screenshot.setBounds(0, 0, hudStage.getWidth(), hudStage.getHeight());
+			hudStage.addActor(screenshot);
+
+			// now display the menu
+			pauseMenu.show(hudStage);
+
+			hasBlurred = true;
+		}
+	}
+
+	/**
+	 * Hides the pause menu and unblurs the screen
+	 */
+	private void hidePauseMenu() {
+		if (hasBlurred) {
+			screenshot.addAction( sequence(
+//					alpha(0f, .2f, Interpolation.linear),
+					removeActor(screenshot)
+					));
+			blurTargetA.dispose();
+			blurTargetB.dispose();
+			blurTargetC.dispose();
+
+			// hide the pause menu
+			pauseMenu.hide();
+
+			hasBlurred = false;
+		}
+	}
+
+	/**
+	 * Dispose stuff while rendering
+	 */
+	private void cleanup() {
+		if (screenshot != null) {
+			if (screenshot.getParent() == null) {
+				screenshot = null;
+				if (screenTexture != null) {
+					screenTexture.dispose();
+					Gdx.app.log("UNPAUSE", "Unpaused, cleaning up textures");
+				}
+			}
+		}
+	}
+
+
+	/**
+	 * Enable or disable game elements to be touchable
+	 * 
+	 * @param isTouchable Whether or not game elements and UI buttons are responsive to 
+	 * touch events
+	 */
 	private void setGameElementsTouchable(boolean isTouchable) {
 		if (isTouchable) {
 			isGamePlaying = true;
@@ -1192,8 +1278,9 @@ public class GameScreen implements Screen {
 
 	@Override
 	public void resize(int width, int height) {
-		System.out.println("Resizing screen to " + width + " and " + height);
 		gameStage.getViewport().update(width, height, true);
+		hudStage.getViewport().update(width, height, true);
+		Gdx.app.log("Screen", "Screen resized to " + width + " and " + height);
 	}
 
 	@Override
@@ -1219,7 +1306,6 @@ public class GameScreen implements Screen {
 	public void dispose() {
 		gameStage.dispose();
 		hudStage.dispose();
-		skin.dispose();
 		moveBtnFont.dispose();
 		undoBtnFont.dispose();
 		swapBtnFont.dispose();
