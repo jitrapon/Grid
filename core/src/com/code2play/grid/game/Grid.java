@@ -22,7 +22,7 @@ public class Grid {
 
 	/* State of the game */
 	private GameMain game;
-	
+
 	/* Current level */
 	private int level;
 
@@ -43,7 +43,7 @@ public class Grid {
 
 	/** Initial swaps left **/
 	private int defaultSwapsLeft;
-	
+
 	/** Initial number of spawned colored boxes **/
 	private int defaultNumSpawned;
 
@@ -59,13 +59,13 @@ public class Grid {
 	/* Time in millisec in this level before gameover. 
 	 * Set as negative for infinite */
 	private float maxLevelTime;
-	
+
 	/* Starting number of swaps in this level */
 	private int numSwapsLeft;
-	
+
 	/* Number of undo moves left (max is 9) */
 	private int undoCount;
-	
+
 	/* all the gridboxes in this grid */
 	private List<GridBox> grid;
 	private int width;
@@ -77,8 +77,8 @@ public class Grid {
 	private Array<Group> colorGroups;
 	private static final int MIN_CHAIN_SIZE = 3;
 	private int numMinChainGroup;
-	
-	
+
+
 
 	/******************************************************************************************/
 	/************************************ INIT METHODS **************************************/
@@ -212,7 +212,7 @@ public class Grid {
 		g.level = Integer.parseInt( file.name().substring(0, file.name().indexOf('.')) );
 		return g;
 	}
-	
+
 	/**
 	 * Restores the default state of this level
 	 * This method is to be called when the player reloads the state of the default level
@@ -236,26 +236,26 @@ public class Grid {
 
 		return true;
 	}
-	
+
 	public void undoMove() {
 		if (undoCount >= 1) undoCount--;
 	}
-	
+
 	public void addUndoCount() {
 		if (undoCount < 9) undoCount++;
 	}
 
 	/******************************************************************************************/
 	/************************************ GETTER METHODS **************************************/
-	
+
 	public int getMinGoldMoves() {
 		return minGoldMovesLeft;
 	}
-	
+
 	public int getMinSilverMoves() {
 		return minSilverMovesLeft;
 	}
-	
+
 	public int getLevel() {
 		return level;
 	}
@@ -292,7 +292,7 @@ public class Grid {
 	public int getNumSwapsLeft() {
 		return numSwapsLeft;
 	}
-	
+
 	public int getUndoCount() {
 		return undoCount;
 	}
@@ -761,36 +761,44 @@ public class Grid {
 		}
 		return colorGroups;
 	}
-	
+
 	/**
 	 * Call this method to update and transition game state accordingly
+	 * @returns Whether or not the game state has changed
 	 */
-	public void updateGameState() {
+	public boolean updateGameState(float deltaTime, float stateChangeWaitTime) {
 		int movesLeft = getMovesLeft();
-//		System.out.println("Moves left: " + movesLeft + " Box: " + numBoxSpawned);
-		
+		//		System.out.println("Moves left: " + movesLeft + " Box: " + numBoxSpawned);
+
 		// CHALLENGE Mode
 		if (game.getGameMode() == GameMode.CHALLENGE) {
-			
+
 			if (numBoxSpawned > 0) {
 				// if no more move is allowed, we set the game state to be GAMEOVER
 				// and tell the Render class to update things accordingly
 				if (movesLeft == 0 && getNumColorGroups() == 0) {
-					game.actionResolver.showLongToast("No more move left. Game is over!");
-					game.setGameState(GameState.GAMEOVER);
+					if (deltaTime > stateChangeWaitTime) {
+						game.actionResolver.showLongToast("No more move left. Game is over!");
+						game.setGameState(GameState.GAMEOVER);
+					}
+					return true;
 				}
 			}
-			
+
 			else {
 				// if no more colored tiles are left, we transition to COMPLETE
 				if (movesLeft >= 0 && numBoxSpawned == 0) {
-					game.actionResolver.showLongToast("Level comeplete!");
-					game.setGameState(GameState.COMPLETE);
+					if (deltaTime > stateChangeWaitTime) {
+						game.actionResolver.showLongToast("Level comeplete!");
+						game.setGameState(GameState.COMPLETE);
+					}
+					return true;
 				}
 			}
 		}
+		return false;
 	}
-	
+
 
 	/**************************************************************************************************/
 	/*************************************** AUXILIARY METHODS ****************************************/

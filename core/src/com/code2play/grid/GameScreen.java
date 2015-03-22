@@ -38,7 +38,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
-import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
+import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
@@ -51,6 +51,7 @@ import com.code2play.grid.game.GridBox;
 import com.code2play.grid.game.GridBox.Color;
 import com.code2play.grid.game.Swipe;
 import com.code2play.grid.ui.BlurImage;
+import com.code2play.grid.ui.GameDialog;
 import com.code2play.grid.ui.MoveImage;
 import com.code2play.grid.ui.MoveLabel;
 import com.code2play.grid.ui.SwapLabel;
@@ -142,6 +143,10 @@ public class GameScreen implements Screen {
 	 * dragging direction
 	 */
 	private static float DRAG_MIN_THRESHOLD = 50f;
+	
+	/**
+	 * BUTTONS
+	 */
 
 	/** UI-reset button */
 	private Image resetBtn;
@@ -157,6 +162,19 @@ public class GameScreen implements Screen {
 
 	/** UI-settings button */
 	private Image settingsBtn;
+	
+	/**
+	 * FONTS
+	 */
+	
+	/** UI-font for in-game dialog title */
+	private BitmapFont dialogTitleFont;
+	
+	/** UI-font for in-game dialog content */
+	private BitmapFont dialogContentFont;
+	
+	/** UI-font for in-game dialog buttons */
+	private BitmapFont dialogButtonFont;
 
 	/** UI-font for the gamescreen */
 	private BitmapFont moveBtnFont;
@@ -172,7 +190,10 @@ public class GameScreen implements Screen {
 
 	/** Font generator **/
 	private FreeTypeFontGenerator fontGenerator;
-
+	
+	/** Dialog button font parameter **/
+	private FreeTypeFontParameter dialogFontParam;
+	
 	/** Move button font parameter **/
 	private FreeTypeFontParameter moveBtnFontParam;
 
@@ -243,7 +264,10 @@ public class GameScreen implements Screen {
 	private Texture screenTexture;
 
 	/** Popup dialog for the pause menu **/
-	private Dialog pauseMenu;
+	private GameDialog pauseMenu;
+	
+	/** Popup dialog for gameover **/
+	private GameDialog gameOverMenu;
 
 	final String VERT =  
 			"attribute vec4 "+ShaderProgram.POSITION_ATTRIBUTE+";\n" +
@@ -501,7 +525,6 @@ public class GameScreen implements Screen {
 		fontGenerator.scaleForPixelHeight((int)Math.ceil(40));
 		moveBtnFont = fontGenerator.generateFont(moveBtnFontParam);
 		moveBtnFont.setScale(1f, 2f);
-		fontGenerator.dispose();
 
 		LabelStyle moveLableStyle = new LabelStyle(moveBtnFont, GameScreen.parseColor(moveBtnFontColor));
 		singleDigitPos = moveBtn.getX() + 50;
@@ -543,9 +566,25 @@ public class GameScreen implements Screen {
 			hudStage.addActor(fpsLabel);
 		}
 
-		// initialize pause menu dialog
-		Assets.getSkin().getFont("default-font").setScale(3f);
-		pauseMenu = new Dialog("PAUSE", Assets.getSkin(), "default") {
+		// initialize game menu dialog
+		dialogFontParam = new FreeTypeFontParameter();
+		dialogFontParam.minFilter = Texture.TextureFilter.Nearest;
+		dialogFontParam.magFilter = Texture.TextureFilter.MipMapLinearNearest;
+		dialogFontParam.size = (int)Math.ceil(45);
+		fontGenerator.scaleForPixelHeight((int)Math.ceil(45));
+		dialogButtonFont = fontGenerator.generateFont(dialogFontParam);
+		dialogButtonFont.setScale(.5f, 1.2f);
+		
+		dialogContentFont = fontGenerator.generateFont(dialogFontParam);
+		dialogContentFont.setScale(.5f, .5f);
+		
+		dialogTitleFont = fontGenerator.generateFont(dialogFontParam);
+		dialogTitleFont.setScale(1.2f, 1.9f);
+		
+		fontGenerator.dispose();
+		
+		pauseMenu = new GameDialog("PAUSED", Assets.getSkin(), dialogTitleFont, dialogContentFont,
+				dialogButtonFont, "default") {
 
 			protected void result(Object object) {
 				String cmd = (String) object;
@@ -562,10 +601,10 @@ public class GameScreen implements Screen {
 		};
 		
 		float btnHeight = hudStage.getHeight()*.1f;
-		float btnWidth = hudStage.getWidth()*.8f;
+		float btnWidth = hudStage.getWidth()*1f;
 		
 		pauseMenu.getButtonTable().row().width(btnWidth).height(btnHeight);
-		pauseMenu.button("Level Menu", "level_select");
+		pauseMenu.button("Level Select", "level_select");
 		pauseMenu.getButtonTable().row().width(btnWidth).height(btnHeight);
 		pauseMenu.button("Settings", "settings");
 		pauseMenu.getButtonTable().row().width(btnWidth).height(btnHeight);
@@ -573,6 +612,29 @@ public class GameScreen implements Screen {
 		
 		pauseMenu.setModal(true);
 		pauseMenu.setMovable(false);
+		
+		// initialize gameover dialog
+		gameOverMenu = new GameDialog("No More Moves", Assets.getSkin(), dialogTitleFont, dialogContentFont,
+				dialogButtonFont, "default") {
+
+			protected void result(Object object) {
+				String cmd = (String) object;
+				if (cmd.equals("level_select"))
+					return;
+				else if (cmd.equals("retry")) {
+					hideGameOverMenu();
+					restartLevel();
+					game.setGameState(GameState.PLAYING);
+				}
+			}
+		};
+		
+		gameOverMenu.text("Nice try. You ran out of moves, retry?");
+		gameOverMenu.button("Level Select", "level_select");
+		gameOverMenu.button("Retry", "retry");
+		
+		gameOverMenu.setModal(true);
+		gameOverMenu.setMovable(false);
 
 		// add all actor and group to the stage
 		btnGroup = new Group();
@@ -839,6 +901,8 @@ public class GameScreen implements Screen {
 	}
 
 	float deltaTime = 0f;
+	float endTime = 0f;
+	float stateChangeWaitTime = 1.5f;
 	Swipe prevSwipeDir = null;
 	int prevMovesLeft = -1;
 	boolean justSwiped = false;
@@ -867,13 +931,6 @@ public class GameScreen implements Screen {
 				drawGrid(grid);
 				forceRender = false;
 			}
-
-			// draw timer, draw undo count, draw swap count, draw retry, draw pop (make one tile disappear),
-			// draw relocate (move one tile to empty tile)
-			// check input for tap on the colored tiles
-			// if there is a tap, then we don't process swipe direction events
-			// until the colored tile is tapped again
-			grid.updateGameState();
 
 			// process input
 			if ( (swipeDir != null || grid.getNumColorGroups() > 0 || hasSwapped) 
@@ -926,6 +983,19 @@ public class GameScreen implements Screen {
 
 				//				System.out.println(grid.getGrid());
 				deltaTime = 0f;
+				endTime = 0f;
+			}
+			else {
+				// draw timer, draw undo count, draw swap count, draw retry, draw pop (make one tile disappear),
+				// draw relocate (move one tile to empty tile)
+				// check input for tap on the colored tiles
+				// if there is a tap, then we don't process swipe direction events
+				// until the colored tile is tapped again
+				if (grid.updateGameState(endTime, stateChangeWaitTime)) {
+					setGameElementsTouchable(false);
+					endTime += delta;
+				}
+				
 			}
 
 			// update the gameStage and draw accordingly
@@ -972,6 +1042,9 @@ public class GameScreen implements Screen {
 			// update the gameStage and draw accordingly
 			// remove input processor 
 			setGameElementsTouchable(false);
+			
+			// displays gameover dialog
+			showGameOverMenu();
 
 			gameStage.act(delta);
 			gameStage.draw();
@@ -1029,7 +1102,40 @@ public class GameScreen implements Screen {
 			hudStage.addActor(screenshot);
 
 			// now display the menu
-			pauseMenu.show(hudStage);
+			pauseMenu.show(hudStage, 
+						sequence(Actions.alpha(0), Actions.alpha(.5f, 0.4f, Interpolation.fade))
+					);
+			pauseMenu.setPosition(Math.round((hudStage.getWidth() - pauseMenu.getWidth()) / 2), 
+					Math.round((hudStage.getHeight() - pauseMenu.getHeight()) / 2));
+
+			hasBlurred = true;
+		}
+	}
+	
+	/**
+	 * Displays the game over dialog and blurs the screen
+	 */
+	private void showGameOverMenu() {
+		if (!hasBlurred) {
+
+			// blur the screen with greyscale tint
+			screen = getBlurredScreenshotTexture();
+			screenshot = new BlurImage(screen, blurShader, overlayShader, blurTargetB, blurTargetC);
+			com.badlogic.gdx.graphics.Color c = screenshot.getColor();
+			screenshot.setColor(c.r, c.g, c.b, 0f);
+			screenshot.addAction(
+					alpha(1f, .2f, Interpolation.linear)
+					);
+
+			screenshot.setBounds(0, 0, hudStage.getWidth(), hudStage.getHeight());
+			hudStage.addActor(screenshot);
+
+			// now display the menu
+			gameOverMenu.show(hudStage, 
+						sequence(Actions.alpha(0), Actions.alpha(.5f, 0.4f, Interpolation.fade))
+					);
+			gameOverMenu.setPosition(Math.round((hudStage.getWidth() - pauseMenu.getWidth()) / 2), 
+					Math.round((hudStage.getHeight() - pauseMenu.getHeight()) / 2));
 
 			hasBlurred = true;
 		}
@@ -1050,6 +1156,26 @@ public class GameScreen implements Screen {
 
 			// hide the pause menu
 			pauseMenu.hide();
+
+			hasBlurred = false;
+		}
+	}
+	
+	/**
+	 * Hides the game over menu and unblurs the screen
+	 */
+	private void hideGameOverMenu() {
+		if (hasBlurred) {
+			screenshot.addAction( sequence(
+//					alpha(0f, .2f, Interpolation.linear),
+					removeActor(screenshot)
+					));
+			blurTargetA.dispose();
+			blurTargetB.dispose();
+			blurTargetC.dispose();
+
+			// hide the pause menu
+			gameOverMenu.hide();
 
 			hasBlurred = false;
 		}
@@ -1309,6 +1435,9 @@ public class GameScreen implements Screen {
 		moveBtnFont.dispose();
 		undoBtnFont.dispose();
 		swapBtnFont.dispose();
+		dialogTitleFont.dispose();
+		dialogContentFont.dispose();
+		dialogButtonFont.dispose();
 		if (debugFont != null) debugFont.dispose();
 		blurShader.dispose();
 		overlayShader.dispose();

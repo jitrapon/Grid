@@ -1,6 +1,9 @@
 # Grid
 Grid game featuring color blocks (similar to 2048) on Android and iOS using LibGDX framework
 
+Code2Play Games
+CoreGen
+
 Game Mode: 
   1. Beat the clock
   2. Classic
@@ -9,7 +12,9 @@ Game Mode:
 
 In classic mode, default number of moves before another random colored square spawns. You start with 4 moves, then 3, 2, and 1. You may collect special items using colored square to temporarily increase moves in-between spawns. 
 
-    To unlock new levels, require some numbers of bronze, silver, and gold.
+Main menu page has weekly puzzle challenge!
+
+    To unlock new levels, require some numbers colored coins.
     Amount of points are awarded depending on number of move left, time, and bonus points.
     To win a level, the player must eliminate all colored tiles onscreen. To eliminate colored tiles,
       the player must move the tiles so that 3 or more are adjacent to each other. 
@@ -35,6 +40,9 @@ In classic mode, default number of moves before another random colored square sp
       	1. When a color group is removed, and at the same turn, another same-colored tile moves in to replace
       		one of the spots, the colored tile doesn't update correctly.
       	2. Adjacent same-colored tiles sometimes don't move in the correct order.
+	
+	Gameplay glitch:
+	1. Move number still not updating properly if there is a color group match on first swipe
 
 
 	Special Grid:
