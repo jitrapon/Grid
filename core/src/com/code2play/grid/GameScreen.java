@@ -175,6 +175,9 @@ public class GameScreen implements Screen {
 	
 	/** UI-font for in-game dialog buttons */
 	private BitmapFont dialogButtonFont;
+	
+	/** UI-font for in-game game dialog */
+	private BitmapFont gameDialogTitleFont;
 
 	/** UI-font for the gamescreen */
 	private BitmapFont moveBtnFont;
@@ -576,14 +579,19 @@ public class GameScreen implements Screen {
 		dialogButtonFont.setScale(.5f, 1.2f);
 		
 		dialogContentFont = fontGenerator.generateFont(dialogFontParam);
-		dialogContentFont.setScale(.5f, .5f);
+		dialogContentFont.setScale(.5f, .9f);
 		
 		dialogTitleFont = fontGenerator.generateFont(dialogFontParam);
 		dialogTitleFont.setScale(1.2f, 1.9f);
 		
+		gameDialogTitleFont = fontGenerator.generateFont(dialogFontParam);
+		gameDialogTitleFont.setScale(1f, 1.7f);
+		
 		fontGenerator.dispose();
 		
-		pauseMenu = new GameDialog("PAUSED", Assets.getSkin(), dialogTitleFont, dialogContentFont,
+		String pauseMenuTitle = "PAUSED";
+		String gameOverMenuTitle = "Game Over";
+		pauseMenu = new GameDialog(pauseMenuTitle, Assets.getSkin(), dialogTitleFont, dialogContentFont,
 				dialogButtonFont, "default") {
 
 			protected void result(Object object) {
@@ -603,19 +611,21 @@ public class GameScreen implements Screen {
 		float btnHeight = hudStage.getHeight()*.1f;
 		float btnWidth = hudStage.getWidth()*1f;
 		
+		pauseMenu.padTop(100);
 		pauseMenu.getButtonTable().row().width(btnWidth).height(btnHeight);
-		pauseMenu.button("Level Select", "level_select");
+		pauseMenu.button("Level Select", "level_select", -1f);
 		pauseMenu.getButtonTable().row().width(btnWidth).height(btnHeight);
-		pauseMenu.button("Settings", "settings");
+		pauseMenu.button("Settings", "settings", -1f);
 		pauseMenu.getButtonTable().row().width(btnWidth).height(btnHeight);
-		pauseMenu.button("Resume", "resume"); 
+		pauseMenu.button("Resume", "resume", -1f); 
+		pauseMenu.key(Keys.BACK, "resume");
 		
 		pauseMenu.setModal(true);
 		pauseMenu.setMovable(false);
 		
 		// initialize gameover dialog
-		gameOverMenu = new GameDialog("No More Moves", Assets.getSkin(), dialogTitleFont, dialogContentFont,
-				dialogButtonFont, "default") {
+		gameOverMenu = new GameDialog(gameOverMenuTitle, Assets.getSkin(), gameDialogTitleFont, 
+				dialogContentFont, dialogButtonFont, "default") {
 
 			protected void result(Object object) {
 				String cmd = (String) object;
@@ -629,9 +639,12 @@ public class GameScreen implements Screen {
 			}
 		};
 		
-		gameOverMenu.text("Nice try. You ran out of moves, retry?");
-		gameOverMenu.button("Level Select", "level_select");
-		gameOverMenu.button("Retry", "retry");
+		btnWidth = hudStage.getWidth() *.5f;
+		
+		gameOverMenu.padTop(100);
+		gameOverMenu.text("Nice try. You ran out of moves. \nRetry?", hudStage.getWidth()*.85f);
+		gameOverMenu.button("Retry", "retry", btnWidth);
+		gameOverMenu.button("Level Select", "level_select", btnWidth);
 		
 		gameOverMenu.setModal(true);
 		gameOverMenu.setMovable(false);
@@ -902,7 +915,7 @@ public class GameScreen implements Screen {
 
 	float deltaTime = 0f;
 	float endTime = 0f;
-	float stateChangeWaitTime = 1.5f;
+	float stateChangeWaitTime = .7f;
 	Swipe prevSwipeDir = null;
 	int prevMovesLeft = -1;
 	boolean justSwiped = false;
@@ -1134,8 +1147,9 @@ public class GameScreen implements Screen {
 			gameOverMenu.show(hudStage, 
 						sequence(Actions.alpha(0), Actions.alpha(.5f, 0.4f, Interpolation.fade))
 					);
-			gameOverMenu.setPosition(Math.round((hudStage.getWidth() - pauseMenu.getWidth()) / 2), 
-					Math.round((hudStage.getHeight() - pauseMenu.getHeight()) / 2));
+			gameOverMenu.setPosition(Math.round((hudStage.getWidth() - gameOverMenu.getWidth()) / 2), 
+					Math.round((hudStage.getHeight() - gameOverMenu.getHeight()) / 2));
+			gameOverMenu.setWidth(hudStage.getWidth());
 
 			hasBlurred = true;
 		}
@@ -1438,6 +1452,7 @@ public class GameScreen implements Screen {
 		dialogTitleFont.dispose();
 		dialogContentFont.dispose();
 		dialogButtonFont.dispose();
+		gameDialogTitleFont.dispose();
 		if (debugFont != null) debugFont.dispose();
 		blurShader.dispose();
 		overlayShader.dispose();
