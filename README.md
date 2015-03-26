@@ -1,6 +1,15 @@
 # Grid
 Grid game featuring color blocks (similar to 2048) on Android and iOS using LibGDX framework
 
+Note: This game is still in development phase.
+Current stage of development: Implementing game state change logic and display dialogs accordingly
+Next stage: 1. Transition to new level screen upon loading new level
+			2. Implement stage select screen
+			3. Implement prototype game menu screen
+			4. Implement demo levels
+			5. Refine animations, art, audio, box graphics
+			6. Test and release!
+
 Code2Play Games
 CoreGen
 
