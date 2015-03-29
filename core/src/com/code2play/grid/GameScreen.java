@@ -43,7 +43,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
 import com.badlogic.gdx.scenes.scene2d.utils.DragListener;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.code2play.grid.game.CoinType;
 import com.code2play.grid.game.GameMode;
 import com.code2play.grid.game.GameState;
 import com.code2play.grid.game.Grid;
@@ -143,7 +145,7 @@ public class GameScreen implements Screen {
 	 * dragging direction
 	 */
 	private static float DRAG_MIN_THRESHOLD = 50f;
-	
+
 	/**
 	 * BUTTONS
 	 */
@@ -162,20 +164,20 @@ public class GameScreen implements Screen {
 
 	/** UI-settings button */
 	private Image settingsBtn;
-	
+
 	/**
 	 * FONTS
 	 */
-	
+
 	/** UI-font for in-game dialog title */
 	private BitmapFont dialogTitleFont;
-	
+
 	/** UI-font for in-game dialog content */
 	private BitmapFont dialogContentFont;
-	
+
 	/** UI-font for in-game dialog buttons */
 	private BitmapFont dialogButtonFont;
-	
+
 	/** UI-font for in-game game dialog */
 	private BitmapFont gameDialogTitleFont;
 
@@ -193,10 +195,10 @@ public class GameScreen implements Screen {
 
 	/** Font generator **/
 	private FreeTypeFontGenerator fontGenerator;
-	
+
 	/** Dialog button font parameter **/
 	private FreeTypeFontParameter dialogFontParam;
-	
+
 	/** Move button font parameter **/
 	private FreeTypeFontParameter moveBtnFontParam;
 
@@ -268,9 +270,28 @@ public class GameScreen implements Screen {
 
 	/** Popup dialog for the pause menu **/
 	private GameDialog pauseMenu;
-	
+
 	/** Popup dialog for gameover **/
 	private GameDialog gameOverMenu;
+
+	/** STRINGS **/
+	/** title of the pause menu **/
+	public static final String PAUSE_MENU_TITLE = "PAUSED";
+
+	/** title of the game over menu **/
+	public static final String GAMEOVER_MENU_TITLE = "Game Over";
+
+	/** title of a level completed with gold score **/
+	private Array<String> levelCompleteGoldTitles = new Array<String>();
+
+	/** title of a level completed with silver score **/
+	private Array<String> levelCompleteSilverTitles = new Array<String>();
+
+	/** title of a level completed with bronze score **/
+	private Array<String> levelCompleteBronzeTitles = new Array<String>();
+
+	/** Level complate label **/
+	private Label levelCompleteLabel;
 
 	final String VERT =  
 			"attribute vec4 "+ShaderProgram.POSITION_ATTRIBUTE+";\n" +
@@ -577,21 +598,19 @@ public class GameScreen implements Screen {
 		fontGenerator.scaleForPixelHeight((int)Math.ceil(45));
 		dialogButtonFont = fontGenerator.generateFont(dialogFontParam);
 		dialogButtonFont.setScale(.5f, 1.2f);
-		
+
 		dialogContentFont = fontGenerator.generateFont(dialogFontParam);
 		dialogContentFont.setScale(.5f, .9f);
-		
+
 		dialogTitleFont = fontGenerator.generateFont(dialogFontParam);
 		dialogTitleFont.setScale(1.2f, 1.9f);
-		
+
 		gameDialogTitleFont = fontGenerator.generateFont(dialogFontParam);
 		gameDialogTitleFont.setScale(1f, 1.7f);
-		
+
 		fontGenerator.dispose();
-		
-		String pauseMenuTitle = "PAUSED";
-		String gameOverMenuTitle = "Game Over";
-		pauseMenu = new GameDialog(pauseMenuTitle, Assets.getSkin(), dialogTitleFont, dialogContentFont,
+
+		pauseMenu = new GameDialog(PAUSE_MENU_TITLE, Assets.getSkin(), dialogTitleFont, dialogContentFont,
 				dialogButtonFont, "default") {
 
 			protected void result(Object object) {
@@ -607,10 +626,10 @@ public class GameScreen implements Screen {
 					return;
 			}
 		};
-		
+
 		float btnHeight = hudStage.getHeight()*.1f;
 		float btnWidth = hudStage.getWidth()*1f;
-		
+
 		pauseMenu.padTop(100);
 		pauseMenu.getButtonTable().row().width(btnWidth).height(btnHeight);
 		pauseMenu.button("Level Select", "level_select", -1f);
@@ -619,12 +638,12 @@ public class GameScreen implements Screen {
 		pauseMenu.getButtonTable().row().width(btnWidth).height(btnHeight);
 		pauseMenu.button("Resume", "resume", -1f); 
 		pauseMenu.key(Keys.BACK, "resume");
-		
+
 		pauseMenu.setModal(true);
 		pauseMenu.setMovable(false);
-		
+
 		// initialize gameover dialog
-		gameOverMenu = new GameDialog(gameOverMenuTitle, Assets.getSkin(), gameDialogTitleFont, 
+		gameOverMenu = new GameDialog(GAMEOVER_MENU_TITLE, Assets.getSkin(), gameDialogTitleFont, 
 				dialogContentFont, dialogButtonFont, "default") {
 
 			protected void result(Object object) {
@@ -638,16 +657,27 @@ public class GameScreen implements Screen {
 				}
 			}
 		};
-		
+
 		btnWidth = hudStage.getWidth() *.5f;
-		
+
 		gameOverMenu.padTop(100);
 		gameOverMenu.text("Nice try. You ran out of moves. \nRetry?", hudStage.getWidth()*.85f);
 		gameOverMenu.button("Retry", "retry", btnWidth);
 		gameOverMenu.button("Level Select", "level_select", btnWidth);
-		
+
 		gameOverMenu.setModal(true);
 		gameOverMenu.setMovable(false);
+
+		// initialize level complete dialog
+		levelCompleteGoldTitles = new Array<String>();
+		levelCompleteGoldTitles.addAll("Perfect!", "Excellent!", "Outstanding!", "Well-played!", 
+				"Genius!");
+		levelCompleteSilverTitles.addAll("Great Job!", "Awesome!", "Nice!");
+		levelCompleteBronzeTitles.addAll("Good Try", "Passable", "You Got It", "Finally");
+
+		levelCompleteLabel = new Label("Congratulations", new LabelStyle(gameDialogTitleFont,
+				com.badlogic.gdx.graphics.Color.WHITE));
+		levelCompleteLabel.setVisible(false);
 
 		// add all actor and group to the stage
 		btnGroup = new Group();
@@ -658,10 +688,11 @@ public class GameScreen implements Screen {
 		btnGroup.addActor(settingsBtn);
 
 		hudStage.addActor(btnGroup);
+		hudStage.addActor(levelCompleteLabel);
 
 		// add this stage to the multiplexer
 		inMultiplexer.addProcessor(hudStage);
-		
+
 		Gdx.app.log("Stage", "HUD stage initialized");
 	}
 
@@ -1008,7 +1039,7 @@ public class GameScreen implements Screen {
 					setGameElementsTouchable(false);
 					endTime += delta;
 				}
-				
+
 			}
 
 			// update the gameStage and draw accordingly
@@ -1055,7 +1086,7 @@ public class GameScreen implements Screen {
 			// update the gameStage and draw accordingly
 			// remove input processor 
 			setGameElementsTouchable(false);
-			
+
 			// displays gameover dialog
 			showGameOverMenu();
 
@@ -1075,6 +1106,9 @@ public class GameScreen implements Screen {
 			// update the gameStage and draw accordingly
 			setGameElementsTouchable(false);
 
+			// displays level complete sequence dialog
+			showLevelCompleteMenu();
+
 			gameStage.act(delta);
 			gameStage.draw();
 
@@ -1086,7 +1120,6 @@ public class GameScreen implements Screen {
 
 			// if Continue is pressed, then end this screen
 			// and reloads the next level
-			// completed = true;
 
 			break;
 
@@ -1116,7 +1149,7 @@ public class GameScreen implements Screen {
 
 			// now display the menu
 			pauseMenu.show(hudStage, 
-						sequence(Actions.alpha(0), Actions.alpha(.5f, 0.4f, Interpolation.fade))
+					sequence(Actions.alpha(0), Actions.alpha(.5f, 0.4f, Interpolation.fade))
 					);
 			pauseMenu.setPosition(Math.round((hudStage.getWidth() - pauseMenu.getWidth()) / 2), 
 					Math.round((hudStage.getHeight() - pauseMenu.getHeight()) / 2));
@@ -1124,7 +1157,7 @@ public class GameScreen implements Screen {
 			hasBlurred = true;
 		}
 	}
-	
+
 	/**
 	 * Displays the game over dialog and blurs the screen
 	 */
@@ -1145,7 +1178,7 @@ public class GameScreen implements Screen {
 
 			// now display the menu
 			gameOverMenu.show(hudStage, 
-						sequence(Actions.alpha(0), Actions.alpha(.5f, 0.4f, Interpolation.fade))
+					sequence(Actions.alpha(0), Actions.alpha(.5f, 0.4f, Interpolation.fade))
 					);
 			gameOverMenu.setPosition(Math.round((hudStage.getWidth() - gameOverMenu.getWidth()) / 2), 
 					Math.round((hudStage.getHeight() - gameOverMenu.getHeight()) / 2));
@@ -1156,12 +1189,40 @@ public class GameScreen implements Screen {
 	}
 
 	/**
+	 * Displays level complete dialog
+	 */
+	private void showLevelCompleteMenu() {
+		if (!hasBlurred) {
+			levelCompleteLabel.setVisible(true);
+
+			String title = "You Win!";
+			if (grid.getCoinType() == CoinType.GOLD) 
+				title = levelCompleteGoldTitles.random();
+			else if (grid.getCoinType() == CoinType.SILVER) 
+				title = levelCompleteSilverTitles.random();
+			else 
+				title = levelCompleteBronzeTitles.random();
+
+			levelCompleteLabel.setText(title);
+			levelCompleteLabel.pack();
+			levelCompleteLabel.setPosition(Math.round((hudStage.getWidth() - levelCompleteLabel.getWidth()) / 2), 
+					hudStage.getHeight() * .75f);
+			levelCompleteLabel.addAction(
+					sequence(Actions.alpha(0), Actions.alpha(1f, 0.4f, Interpolation.fade))
+					);
+			Gdx.app.log("LEVEL COMPLETE", "Showing label with text: " + title);
+			
+			hasBlurred = true;
+		}
+	}
+
+	/**
 	 * Hides the pause menu and unblurs the screen
 	 */
 	private void hidePauseMenu() {
 		if (hasBlurred) {
 			screenshot.addAction( sequence(
-//					alpha(0f, .2f, Interpolation.linear),
+					//					alpha(0f, .2f, Interpolation.linear),
 					removeActor(screenshot)
 					));
 			blurTargetA.dispose();
@@ -1174,14 +1235,14 @@ public class GameScreen implements Screen {
 			hasBlurred = false;
 		}
 	}
-	
+
 	/**
 	 * Hides the game over menu and unblurs the screen
 	 */
 	private void hideGameOverMenu() {
 		if (hasBlurred) {
 			screenshot.addAction( sequence(
-//					alpha(0f, .2f, Interpolation.linear),
+					//					alpha(0f, .2f, Interpolation.linear),
 					removeActor(screenshot)
 					));
 			blurTargetA.dispose();
@@ -1193,6 +1254,13 @@ public class GameScreen implements Screen {
 
 			hasBlurred = false;
 		}
+	}
+
+	/**
+	 * Hides the level complate menu and unblurs the screen
+	 */
+	private void hideLevelCompleteMenu() {
+
 	}
 
 	/**

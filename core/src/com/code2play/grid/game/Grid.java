@@ -65,6 +65,9 @@ public class Grid {
 
 	/* Number of undo moves left (max is 9) */
 	private int undoCount;
+	
+	/* Current coin type */
+	private CoinType coinType;
 
 	/* all the gridboxes in this grid */
 	private List<GridBox> grid;
@@ -349,6 +352,10 @@ public class Grid {
 
 		return neighbors;
 	}
+	
+	public CoinType getCoinType() {
+		return coinType;
+	}
 
 	/******************************************************************************************/
 	/************************************ UPDATE METHODS **************************************/
@@ -425,10 +432,23 @@ public class Grid {
 
 	/**
 	 * Call this method to decrement the move counts from the maximum
-	 * possible moves allowed in a level
+	 * possible moves allowed in a level. Also this method will update the coin type.
 	 */
 	public void updateMoveCount() {
-		if (numMovesLeft > 0) numMovesLeft--;
+		if (numMovesLeft > 0) {
+			numMovesLeft--;
+			
+			if (numMovesLeft >= getMinGoldMoves() && coinType != CoinType.GOLD) {
+				coinType = CoinType.GOLD;
+			}
+			else if (numMovesLeft < getMinGoldMoves() && numMovesLeft >= getMinSilverMoves()
+					&& coinType != CoinType.SILVER) {
+				coinType = CoinType.SILVER;
+			}
+			else if (numMovesLeft < getMinSilverMoves() && coinType != CoinType.BRONZE) {
+				coinType = CoinType.BRONZE;
+			}
+		}
 	}
 
 	/**
