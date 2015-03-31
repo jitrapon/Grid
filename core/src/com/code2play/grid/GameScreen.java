@@ -292,6 +292,9 @@ public class GameScreen implements Screen {
 
 	/** Level complate label **/
 	private Label levelCompleteLabel;
+	
+	/** Level complete game dialog **/
+	private GameDialog levelCompleteDialog;
 
 	final String VERT =  
 			"attribute vec4 "+ShaderProgram.POSITION_ATTRIBUTE+";\n" +
@@ -653,7 +656,7 @@ public class GameScreen implements Screen {
 				else if (cmd.equals("retry")) {
 					hideGameOverMenu();
 					restartLevel();
-					game.setGameState(GameState.PLAYING);
+					game.setGameState(GameState.PLAYING); 
 				}
 			}
 		};
@@ -677,7 +680,32 @@ public class GameScreen implements Screen {
 
 		levelCompleteLabel = new Label("Congratulations", new LabelStyle(gameDialogTitleFont,
 				com.badlogic.gdx.graphics.Color.WHITE));
-		levelCompleteLabel.setVisible(false);
+		
+		levelCompleteDialog = new GameDialog("", Assets.getSkin(), gameDialogTitleFont, 
+				dialogContentFont, dialogButtonFont, "default") {
+
+			protected void result(Object object) {
+				String cmd = (String) object;
+				if (cmd.equals("retry")) {
+					hideLevelCompleteMenu();
+					restartLevel();
+					game.setGameState(GameState.PLAYING); 
+				}
+			}
+		};
+
+		btnWidth = hudStage.getWidth() *.5f;
+		btnHeight = hudStage.getHeight() *.07f;
+
+		levelCompleteDialog.text("Some random text goes here\nUp for a new challenge?",
+				hudStage.getWidth()*.85f);
+		levelCompleteDialog.button("Retry", "retry", btnWidth);
+		levelCompleteDialog.button("Level Select", "level_select", btnWidth);
+		levelCompleteDialog.getButtonTable().row().width(levelCompleteDialog.getWidth()).height(btnHeight);
+		levelCompleteDialog.button("Continue", "continue", btnWidth);
+
+		levelCompleteDialog.setModal(true);
+		levelCompleteDialog.setMovable(false); 
 
 		// add all actor and group to the stage
 		btnGroup = new Group();
@@ -688,7 +716,6 @@ public class GameScreen implements Screen {
 		btnGroup.addActor(settingsBtn);
 
 		hudStage.addActor(btnGroup);
-		hudStage.addActor(levelCompleteLabel);
 
 		// add this stage to the multiplexer
 		inMultiplexer.addProcessor(hudStage);
@@ -719,6 +746,7 @@ public class GameScreen implements Screen {
 			firstSwapID = -1;
 			secondSwapID = -1;
 			forceRender = true;
+			labelPosChanged = false;
 			game.actionResolver.showShortToast("Restarted level");
 		}
 	}
@@ -944,7 +972,8 @@ public class GameScreen implements Screen {
 		return fboRegion;
 	}
 
-	float deltaTime = 0f;
+	float deltaTime = 0f;		// accumulated delta time used in PLAYING mode
+	float endDeltaTime = 0f;	// accumulated delta time used in COMPLETE mode
 	float endTime = 0f;
 	float stateChangeWaitTime = .7f;
 	Swipe prevSwipeDir = null;
@@ -1055,6 +1084,7 @@ public class GameScreen implements Screen {
 
 			// update time
 			deltaTime += delta;
+			endDeltaTime = 0f;
 
 			break;
 
@@ -1107,7 +1137,7 @@ public class GameScreen implements Screen {
 			setGameElementsTouchable(false);
 
 			// displays level complete sequence dialog
-			showLevelCompleteMenu();
+			showLevelCompleteMenu(endDeltaTime);
 
 			gameStage.act(delta);
 			gameStage.draw();
@@ -1120,6 +1150,7 @@ public class GameScreen implements Screen {
 
 			// if Continue is pressed, then end this screen
 			// and reloads the next level
+			endDeltaTime += delta;
 
 			break;
 
@@ -1188,12 +1219,26 @@ public class GameScreen implements Screen {
 		}
 	}
 
+	boolean labelPosChanged = false;
 	/**
 	 * Displays level complete dialog
+	 * Call this method in the update to continue updating the dialog and subsequent animations
 	 */
-	private void showLevelCompleteMenu() {
-		if (!hasBlurred) {
-			levelCompleteLabel.setVisible(true);
+	private void showLevelCompleteMenu(float deltaTime) {
+		
+		// if we haven't displayed the label, display it
+		if (levelCompleteLabel.getStage() == null) {
+
+			// capture current screen, and blurs it
+			screen = getBlurredScreenshotTexture();
+			screenshot = new BlurImage(screen, blurShader, overlayShader, blurTargetB, blurTargetC);
+			com.badlogic.gdx.graphics.Color c = screenshot.getColor();
+			screenshot.setColor(c.r, c.g, c.b, 0f);
+			screenshot.setBounds(0, 0, hudStage.getWidth(), hudStage.getHeight());
+			hudStage.addActor(screenshot);
+			
+			// show the level complete text
+			hudStage.addActor(levelCompleteLabel);
 
 			String title = "You Win!";
 			if (grid.getCoinType() == CoinType.GOLD) 
@@ -1206,13 +1251,35 @@ public class GameScreen implements Screen {
 			levelCompleteLabel.setText(title);
 			levelCompleteLabel.pack();
 			levelCompleteLabel.setPosition(Math.round((hudStage.getWidth() - levelCompleteLabel.getWidth()) / 2), 
-					hudStage.getHeight() * .75f);
+					hudStage.getHeight() * .5f);
 			levelCompleteLabel.addAction(
 					sequence(Actions.alpha(0), Actions.alpha(1f, 0.4f, Interpolation.fade))
 					);
-			Gdx.app.log("LEVEL COMPLETE", "Showing label with text: " + title);
+		}
+		
+		// if we already displayed the label, we transition it up, blurs the screen,
+		// and show the dialog
+		else {
+			if (deltaTime > 1f && !labelPosChanged) {
+				levelCompleteLabel.addAction(moveTo(levelCompleteLabel.getX(), hudStage.getHeight() *.75f, .3f, 
+						Interpolation.sineOut));
+				labelPosChanged = true;
+			}
 			
-			hasBlurred = true;
+			// blur the image when action is finished and shows dialog
+			else if (deltaTime > 1.1f && !hasBlurred) {
+				screenshot.addAction(
+						alpha(1f, .2f, Interpolation.linear)
+						);
+				levelCompleteDialog.show(hudStage, 
+						sequence(Actions.alpha(0), Actions.alpha(.5f, 0.4f, Interpolation.fade))
+						);
+				levelCompleteDialog.setPosition(
+						Math.round((hudStage.getWidth() - levelCompleteDialog.getWidth()) / 2), 
+						Math.round((hudStage.getHeight() - levelCompleteDialog.getHeight()) / 2));
+				levelCompleteDialog.setWidth(hudStage.getWidth());
+				hasBlurred = true;
+			}
 		}
 	}
 
@@ -1260,7 +1327,25 @@ public class GameScreen implements Screen {
 	 * Hides the level complate menu and unblurs the screen
 	 */
 	private void hideLevelCompleteMenu() {
+		if (hasBlurred) {
+			screenshot.addAction( sequence(
+					//					alpha(0f, .2f, Interpolation.linear),
+					removeActor(screenshot)
+					));
+			blurTargetA.dispose();
+			blurTargetB.dispose();
+			blurTargetC.dispose();
 
+			// hide the dialog
+			levelCompleteDialog.hide();
+			
+			// hide the label
+			levelCompleteLabel.addAction(
+						sequence(Actions.fadeOut(0.4f), Actions.removeActor())
+					);
+
+			hasBlurred = false;
+		}
 	}
 
 	/**
@@ -1272,7 +1357,6 @@ public class GameScreen implements Screen {
 				screenshot = null;
 				if (screenTexture != null) {
 					screenTexture.dispose();
-					Gdx.app.log("UNPAUSE", "Unpaused, cleaning up textures");
 				}
 			}
 		}
@@ -1512,6 +1596,7 @@ public class GameScreen implements Screen {
 	@Override
 	// never called automatically
 	public void dispose() {
+		cleanup();
 		gameStage.dispose();
 		hudStage.dispose();
 		moveBtnFont.dispose();
