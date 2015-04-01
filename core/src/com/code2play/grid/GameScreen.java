@@ -1271,6 +1271,11 @@ public class GameScreen implements Screen {
 				screenshot.addAction(
 						alpha(1f, .2f, Interpolation.linear)
 						);
+				levelCompleteDialog.text("Moves Used: " + grid.getNumMovesUsed() + "\n" +
+						"Moves Left: " + grid.getMovesLeft() + "\n" +
+						"Gold (" + grid.getMinGoldMoves() + ") " + "Silver (" + grid.getMinSilverMoves() + ")\n"
+						+ "Time taken: 00:00",
+						hudStage.getWidth() *.8f);
 				levelCompleteDialog.show(hudStage, 
 						sequence(Actions.alpha(0), Actions.alpha(.5f, 0.4f, Interpolation.fade))
 						);

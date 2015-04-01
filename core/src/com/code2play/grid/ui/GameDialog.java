@@ -16,6 +16,7 @@ public class GameDialog extends Dialog {
 	private BitmapFont titleFont;
 	private BitmapFont contentFont;
 	private BitmapFont btnFont;
+	private Label content;
 
 	public GameDialog(String title, Skin skin, BitmapFont titleFont, BitmapFont contentFont, BitmapFont btnFont,
 			String windowStyleName) {
@@ -43,9 +44,15 @@ public class GameDialog extends Dialog {
 	}
 	
 	public GameDialog text(String text, LabelStyle style, float width) {
-		Label content = new Label(text, style);
-		content.setWrap(true);
-		content.setAlignment(Align.center);
+		if (content != null) {
+			this.getContentTable().removeActor(content);
+			content.setText(text);
+		}
+		else {
+			content = new Label(text, style);
+			content.setWrap(true);
+			content.setAlignment(Align.center);
+		}
 		this.getContentTable().padTop(100).padBottom(100).add(content).width(width).row();
 		return this;
 	}

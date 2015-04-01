@@ -240,10 +240,17 @@ public class Grid {
 		return true;
 	}
 
+	/**
+	 * TODO
+	 * Undo a move and update the undo count
+	 */
 	public void undoMove() {
 		if (undoCount >= 1) undoCount--;
 	}
 
+	/**
+	 * Increments the total of number of undo's available. Max is 9.
+	 */
 	public void addUndoCount() {
 		if (undoCount < 9) undoCount++;
 	}
@@ -251,30 +258,60 @@ public class Grid {
 	/******************************************************************************************/
 	/************************************ GETTER METHODS **************************************/
 
+	/**
+	 * Returns the minimum number of moves left to have to achieve 
+	 * gold coin.
+	 * @return
+	 */
 	public int getMinGoldMoves() {
 		return minGoldMovesLeft;
 	}
 
+	/**
+	 * Returns the minimum number of moves left to have to achieve 
+	 * silver coin.
+	 * @return
+	 */
 	public int getMinSilverMoves() {
 		return minSilverMovesLeft;
 	}
 
+	/**
+	 * Returns the current level number
+	 * @return
+	 */
 	public int getLevel() {
 		return level;
 	}
 
+	/**
+	 * Returns the number of grid boxes as width
+	 * @return
+	 */
 	public int getWidth() {
 		return width;
 	}
 
+	/**
+	 * Returns the number of grid boxes as height
+	 * @return
+	 */
 	public int getHeight() {
 		return height;
 	}
 
+	/**
+	 * Returns the underlying array of grid boxes
+	 * @return
+	 */
 	public List<GridBox> getGrid() {
 		return grid;
 	}
 
+	/**
+	 * Returns the total number of grid boxes in this grid
+	 * @return
+	 */
 	public int getSize() {
 		return grid.size();
 	}
@@ -288,14 +325,26 @@ public class Grid {
 		return numMovesLeft;
 	}
 
+	/**
+	 * Returns the time left in this level
+	 * @return
+	 */
 	public float getTimeLeft() {
 		return maxLevelTime;
 	}
 
+	/**
+	 * Returns the number of swaps available to use
+	 * @return
+	 */
 	public int getNumSwapsLeft() {
 		return numSwapsLeft;
 	}
 
+	/**
+	 * Returns the number of undo's available to use
+	 * @return
+	 */
 	public int getUndoCount() {
 		return undoCount;
 	}
@@ -353,8 +402,24 @@ public class Grid {
 		return neighbors;
 	}
 	
+	/** 
+	 * Returns type of coin awarded if the player were to complete the 
+	 * level with the current move left
+	 * @return
+	 */
 	public CoinType getCoinType() {
 		return coinType;
+	}
+	
+	/**
+	 * Returns the number of moves used since the start of the level
+	 * The number of used moves is equal to the starting number at each level
+	 * subtracted by the number of moves left available when the player
+	 * completes the level
+	 * @return
+	 */
+	public int getNumMovesUsed() {
+		return defaultMovesLeft - numMovesLeft;
 	}
 
 	/******************************************************************************************/
