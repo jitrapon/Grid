@@ -238,7 +238,7 @@ public class GameScreen implements Screen {
 	private Label fpsLabel;
 
 	/** Force render once **/
-	private boolean forceRender = true;
+	private boolean forceRender;
 
 	/** Whether or not game elements are responsive to touch events **/
 	private boolean isGamePlaying;
@@ -401,10 +401,6 @@ public class GameScreen implements Screen {
 						hidePauseMenu();
 						game.setGameState(GameState.PLAYING);
 					}
-					else {
-						game.actionResolver.showShortToast("Next back button will exit the game");
-						Gdx.input.setCatchBackKey(false);
-					}
 				}
 
 				return true;
@@ -424,6 +420,7 @@ public class GameScreen implements Screen {
 		inMultiplexer.addProcessor(backProcessor);
 		Gdx.input.setInputProcessor(inMultiplexer);
 		Gdx.input.setCatchBackKey(true);
+		forceRender = true;
 		game.actionResolver.showShortToast("Level " + grid.getLevel());
 	}
 
@@ -620,7 +617,7 @@ public class GameScreen implements Screen {
 				String cmd = (String) object;
 				Gdx.app.log("PAUSE", "Chosen: " + object);
 				if (cmd.equals("level_select"))
-					return;
+					game.exit();
 				else if (cmd.equals("resume")) {
 					hidePauseMenu();
 					game.setGameState(GameState.PLAYING);
@@ -652,7 +649,7 @@ public class GameScreen implements Screen {
 			protected void result(Object object) {
 				String cmd = (String) object;
 				if (cmd.equals("level_select"))
-					return;
+					game.exit();
 				else if (cmd.equals("retry")) {
 					hideGameOverMenu();
 					restartLevel();
@@ -690,6 +687,12 @@ public class GameScreen implements Screen {
 					hideLevelCompleteMenu();
 					restartLevel();
 					game.setGameState(GameState.PLAYING); 
+				}
+				else if (cmd.equals("continue")) {
+					game.loadNextLevel();
+				}
+				else if (cmd.equals("level_select")) {
+					game.exit();
 				}
 			}
 		};
@@ -976,6 +979,7 @@ public class GameScreen implements Screen {
 	float endDeltaTime = 0f;	// accumulated delta time used in COMPLETE mode
 	float endTime = 0f;
 	float stateChangeWaitTime = .7f;
+	float firstLoadDelay = 1.5f;
 	Swipe prevSwipeDir = null;
 	int prevMovesLeft = -1;
 	boolean justSwiped = false;
@@ -1000,7 +1004,8 @@ public class GameScreen implements Screen {
 			setGameElementsTouchable(true);
 
 			// render grid for the first time
-			if (forceRender) {
+			if (forceRender && firstLoadDelay <= 0f) {
+				Gdx.app.log("SPAWN", "Spawning all boxes");
 				drawGrid(grid);
 				forceRender = false;
 			}
@@ -1010,7 +1015,9 @@ public class GameScreen implements Screen {
 
 					//disable swipe directions
 					//proceed when animation finishes for all gridboxes (after animationTime)
-					&& deltaTime >= (gridBoxMoveAnimTime + gridBoxClearAnimTime) ) {
+					&& deltaTime >= (gridBoxMoveAnimTime + gridBoxClearAnimTime) 
+					&& firstLoadDelay <= 0f
+					) {
 
 				// update gridbox - swipe
 				if (!hasSwapped) {
@@ -1068,7 +1075,7 @@ public class GameScreen implements Screen {
 					setGameElementsTouchable(false);
 					endTime += delta;
 				}
-
+				firstLoadDelay -= delta;
 			}
 
 			// update the gameStage and draw accordingly
@@ -1093,7 +1100,7 @@ public class GameScreen implements Screen {
 			break;
 
 		case PAUSED:
-
+			
 			// disable input events ui buttons and game elements
 			setGameElementsTouchable(false);
 
@@ -1587,7 +1594,7 @@ public class GameScreen implements Screen {
 
 	@Override
 	public void hide() {
-		Gdx.input.setCatchBackKey(false);
+		// Gdx.input.setCatchBackKey(false);
 	}
 
 	@Override

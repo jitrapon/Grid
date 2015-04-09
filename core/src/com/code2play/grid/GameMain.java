@@ -61,7 +61,7 @@ public class GameMain extends Game {
 		if (gameMode == GameMode.CLASSIC)
 			grid = new Grid(this, DEFAULT_GRID_WIDTH, DEFAULT_GRID_HEIGHT);			// normal mode
 		else if (gameMode == GameMode.CHALLENGE)
-			grid = Grid.load(this, Gdx.files.internal("levels/2.lvl"));				// challenge mode
+			grid = Grid.load(this, Gdx.files.internal("levels/1.lvl"));				// challenge mode
 
 		// set screen TODO mainmenu screen, puzzle choosing screen
 		//TODO done in puzzle choosing screen
@@ -77,22 +77,23 @@ public class GameMain extends Game {
 	 * a completely new one.
 	 * TODO
 	 */
-	private void loadNextLevel() {
+	public void loadNextLevel() {
+		String nextLevel = "levels/" + (grid.getLevel()+1) + ".lvl";
+		if (grid.getLevel()+1 > 3) {
+			actionResolver.showShortToast(nextLevel + " not found");
+			return;
+		}
+		
 		// load new level file
-		int currLevel = grid.getLevel();
 		grid = null;
-		FileHandle fh = Gdx.files.internal("levels/" + currLevel+1 + ".lvl");
-		if (fh.exists()) {
-			grid = Grid.load(this, fh);
-		}
-		else {
-			// set screen to say END of all levels
-		}
+		FileHandle fh = Gdx.files.internal(nextLevel);
+		grid = Grid.load(this, fh);
 		
 		// dispose all stuff in this current screen
-		this.getScreen().dispose();		
+		gameScreen.dispose();		
 		
 		// create a new game screen with loaded file
+		gameState = GameState.PLAYING;
 		gameScreen = new GameScreen(this);
 		this.setScreen(gameScreen);
 	}
@@ -119,6 +120,10 @@ public class GameMain extends Game {
 
 	public Grid getGrid() {
 		return grid;
+	}
+	
+	public void exit() {
+		Gdx.app.exit();
 	}
 
 	@Override
