@@ -3,12 +3,17 @@ Grid game featuring color blocks (similar to 2048) on Android and iOS using LibG
 
 Note: This game is still in development phase.
 Current stage of development: Implementing game state change logic and display dialogs accordingly
-Next stage: 1. Transition to new level screen upon loading new level
+Next stage: 1. Transition to new level screen upon loading new level - DONE
+				1.1 Consolidate level files to one file per 10 levels (minimize loading per level)
+				1.2 Level complete dialog text and button fades out upon 'Continue'. 
+					Shows animated icon while loading new level file.
+					Once load completes, unblurs screen and fades out dialog
 			2. Implement stage select screen
 			3. Implement prototype game menu screen
 			4. Implement demo levels
-			5. Refine animations, art, audio, box graphics
-			6. Test and release!
+			5. Implement classic mode
+			6. Refine animations, art, audio, box graphics
+			7. Test and release!
 
 Code2Play Games
 CoreGen
