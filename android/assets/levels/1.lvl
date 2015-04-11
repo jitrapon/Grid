@@ -1,4 +1,4 @@
 //Grid Details:<width>,<height>,<maxMoves>,<minGold>,<minSilver>,<maxTime>,<baseSwaps>,
 //Grid Tiles, x=none, ^=block, b=blue, g=green, r=red, y=yellow, ?=random
-4,4,5,3,2,-1,1
-b,r,r,x,x,r,x,y,y,r,y,x,b,y,b,y
+3,3,3,2,1,-1,0
+r,x,r,r,x,x,x,x,x

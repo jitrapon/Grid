@@ -66,10 +66,10 @@ public class GameMain extends Game {
 		// set screen TODO mainmenu screen, puzzle choosing screen
 		//TODO done in puzzle choosing screen
 		gameScreen = new GameScreen(this);	
+		
 		// this game mode has to be set once main menu
 		// screen is chosen, and puzzle file is loaded
 		this.setScreen(gameScreen);								// this has to be main menu screen
-		//		actionResolver.showLongToast("Welcome to Grid!");
 	}
 
 	/**
@@ -79,8 +79,8 @@ public class GameMain extends Game {
 	 */
 	public void loadNextLevel() {
 		String nextLevel = "levels/" + (grid.getLevel()+1) + ".lvl";
-		if (grid.getLevel()+1 > 3) {
-			actionResolver.showShortToast(nextLevel + " not found");
+		if (grid.getLevel()+1 > 7) {
+			actionResolver.showShortToast("This level is not available in DEMO version!");
 			return;
 		}
 		

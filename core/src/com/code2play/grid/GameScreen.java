@@ -449,7 +449,7 @@ public class GameScreen implements Screen {
 				if (gridBoxClearAnimTime == 0f) {
 					restartLevel();
 					event.getListenerActor().addAction(
-							rotateBy(-360, .25f)
+							rotateBy(360, .25f)
 							);
 				}
 			}
