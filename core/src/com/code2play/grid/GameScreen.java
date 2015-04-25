@@ -1,6 +1,7 @@
 package com.code2play.grid;
 
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.alpha;
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.fadeOut;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.moveTo;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.parallel;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.removeActor;
@@ -1302,11 +1303,9 @@ public class GameScreen implements Screen {
 		if (hasBlurred) {
 			screenshot.addAction( sequence(
 					//					alpha(0f, .2f, Interpolation.linear),
+					fadeOut(0.4f, Interpolation.fade),
 					removeActor(screenshot)
 					));
-			blurTargetA.dispose();
-			blurTargetB.dispose();
-			blurTargetC.dispose();
 
 			// hide the pause menu
 			pauseMenu.hide();
@@ -1321,12 +1320,9 @@ public class GameScreen implements Screen {
 	private void hideGameOverMenu() {
 		if (hasBlurred) {
 			screenshot.addAction( sequence(
-					//					alpha(0f, .2f, Interpolation.linear),
+					alpha(0f, .4f, Interpolation.linear),
 					removeActor(screenshot)
 					));
-			blurTargetA.dispose();
-			blurTargetB.dispose();
-			blurTargetC.dispose();
 
 			// hide the pause menu
 			gameOverMenu.hide();
@@ -1341,12 +1337,9 @@ public class GameScreen implements Screen {
 	private void hideLevelCompleteMenu() {
 		if (hasBlurred) {
 			screenshot.addAction( sequence(
-					//					alpha(0f, .2f, Interpolation.linear),
+					alpha(0f, .4f, Interpolation.linear),
 					removeActor(screenshot)
 					));
-			blurTargetA.dispose();
-			blurTargetB.dispose();
-			blurTargetC.dispose();
 
 			// hide the dialog
 			levelCompleteDialog.hide();
@@ -1370,6 +1363,9 @@ public class GameScreen implements Screen {
 				if (screenTexture != null) {
 					screenTexture.dispose();
 				}
+				blurTargetA.dispose();
+				blurTargetB.dispose();
+				blurTargetC.dispose();
 			}
 		}
 	}

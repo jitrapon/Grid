@@ -11,29 +11,25 @@ import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 public class BlurImage extends Image {
 
 	private ShaderProgram blurShader;
-	private ShaderProgram overlayShader;
 
 	private static final float MAX_BLUR = 14f;
-	private static final float GREY_SCALE = 5.0f;
 
 	private FrameBuffer fboA;
 	private FrameBuffer fboB;
 
-	boolean run;
-
+	boolean hasBlurred;
 
 	public BlurImage(TextureRegion region, ShaderProgram blurShader, ShaderProgram overlayShader, FrameBuffer fboA,
 			FrameBuffer fboB) {
 		super(region);
 		this.blurShader = blurShader;
-		this.overlayShader = overlayShader;
 		this.fboA = fboA;
 		this.fboB = fboB;
 	}
 
 	@Override
 	public void draw(Batch batch, float parentAlpha) {
-		if (!run) {
+		if (!hasBlurred) {
 			batch.setShader(blurShader);
 
 			blurShader.setUniformf("resolution", Gdx.graphics.getHeight());
@@ -73,7 +69,7 @@ public class BlurImage extends Image {
 			this.setDrawable(new TextureRegionDrawable(region));
 			batch.begin();
 			super.draw(batch, parentAlpha);
-			run = true;
+			hasBlurred = true;
 		}
 
 		else 
