@@ -3,6 +3,7 @@ package com.code2play.grid;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.alpha;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.fadeOut;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.moveTo;
+import static com.badlogic.gdx.scenes.scene2d.actions.Actions.delay;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.parallel;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.removeActor;
 import static com.badlogic.gdx.scenes.scene2d.actions.Actions.rotateBy;
@@ -745,6 +746,7 @@ public class GameScreen implements Screen {
 	 */
 	private void restartLevel() {
 		if (game.getGameMode() == GameMode.CHALLENGE) {
+			roundTime = 0f;
 			removeAllColoredGridBoxes();
 			grid.restoreDefaultState();
 			firstSwapID = -1;
@@ -976,7 +978,8 @@ public class GameScreen implements Screen {
 		return fboRegion;
 	}
 
-	float deltaTime = 0f;		// accumulated delta time used in PLAYING mode
+	float deltaTime = 0f;		// accumulated delta time used in PLAYING mode, reset when input processed
+	float roundTime = 0f;
 	float endDeltaTime = 0f;	// accumulated delta time used in COMPLETE mode
 	float endTime = 0f;
 	float stateChangeWaitTime = .7f;
@@ -1006,11 +1009,17 @@ public class GameScreen implements Screen {
 
 			// render grid for the first time
 			if (forceRender && firstLoadDelay <= 0f) {
-				Gdx.app.log("SPAWN", "Spawning all boxes");
 				drawGrid(grid);
 				forceRender = false;
 			}
-
+			
+			// cancel any swipe direction or swap attempts before spawning all boxes
+			if (roundTime <= delaySpawnTime) {
+				swipeDir = null;
+				firstSwapID = -1;
+				secondSwapID = -1;
+			}
+			
 			// process input
 			if ( (swipeDir != null || grid.getNumColorGroups() > 0 || hasSwapped) 
 
@@ -1018,6 +1027,7 @@ public class GameScreen implements Screen {
 					//proceed when animation finishes for all gridboxes (after animationTime)
 					&& deltaTime >= (gridBoxMoveAnimTime + gridBoxClearAnimTime) 
 					&& firstLoadDelay <= 0f
+					&& roundTime > delaySpawnTime
 					) {
 
 				// update gridbox - swipe
@@ -1092,6 +1102,7 @@ public class GameScreen implements Screen {
 
 			// update time
 			deltaTime += delta;
+			if (firstLoadDelay <= 0) roundTime += delta;
 			endDeltaTime = 0f;
 
 			break;
@@ -1418,7 +1429,9 @@ public class GameScreen implements Screen {
 	 * @param grid
 	 */
 	Image firstSwapImg = null;
+	float delaySpawnTime = 0f;
 	private void drawGrid(Grid grid) {
+		delaySpawnTime = 0f;
 		Iterator<Actor> iter = null;
 		for (GridBox gridBox : grid.getGrid()) {
 			if (!gridBox.isEmpty()) {
@@ -1431,10 +1444,14 @@ public class GameScreen implements Screen {
 					Vector2 pos = gridCoordinates.get(gridBox.getId()-1);
 					gridBoxImg.setPosition(pos.x + (boxWidth/2f), pos.y + (boxHeight/2));
 					gridBoxImg.addAction(
+							sequence(
+									delay(delaySpawnTime),
 							parallel(
 									scaleTo(boxWidth, boxHeight, gridBoxMoveAnimTime, Interpolation.linear),
 									moveTo(pos.x, pos.y, gridBoxMoveAnimTime, Interpolation.linear)
-									));
+									)
+							));
+					delaySpawnTime += .1f;
 					gridBox.setPrevId(-2); 										// not -1 again to avoid replaying spawning animation
 					//					System.out.println("Added Color " + gridBox.getColor());
 					gridBoxImg.setUserObject( new GridBox(gridBox.getId(), gridBox.getColor()) );
@@ -1452,7 +1469,11 @@ public class GameScreen implements Screen {
 						@Override
 						public void touchUp (InputEvent event, float x, float y, 
 								int pointer, int button) {
-							if (getNumSwaps() > 0) {
+							
+							// only display visual selecting when number of swaps are available
+							// and all boxes spawned
+							if ((getNumSwaps() > 0) && 
+									(roundTime > delaySpawnTime)) {
 
 								Image img = (Image) event.getListenerActor();
 								int touchID = ((GridBox)img.getUserObject()).getId();
