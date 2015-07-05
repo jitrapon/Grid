@@ -507,7 +507,7 @@ public class GameScreen implements Screen {
 		undoBtnFontParam.size = (int)Math.ceil(45);
 		fontGenerator.scaleForPixelHeight((int)Math.ceil(45));
 		undoBtnFont = fontGenerator.generateFont(undoBtnFontParam);
-		undoBtnFont.setScale(.5f, 1.2f);
+		undoBtnFont.getData().setScale(.5f, 1.2f);
 
 		LabelStyle undoLabelStyle = new LabelStyle(undoBtnFont, GameScreen.parseColor(vanillaFontColor));
 		undoLabel = new UndoLabel("0", undoLabelStyle, grid);
@@ -530,7 +530,7 @@ public class GameScreen implements Screen {
 		swapBtnFontParam.size = (int)Math.ceil(45);
 		fontGenerator.scaleForPixelHeight((int)Math.ceil(45));
 		swapBtnFont = fontGenerator.generateFont(swapBtnFontParam);
-		swapBtnFont.setScale(.4f, .6f);
+		swapBtnFont.getData().setScale(.4f, .6f);
 
 		LabelStyle swapLabelStyle = new LabelStyle(undoBtnFont, GameScreen.parseColor(vanillaFontColor));
 		float singleDigitPos = swapBtn.getX()+50;
@@ -550,7 +550,7 @@ public class GameScreen implements Screen {
 		moveBtnFontParam.size = (int)Math.ceil(40);
 		fontGenerator.scaleForPixelHeight((int)Math.ceil(40));
 		moveBtnFont = fontGenerator.generateFont(moveBtnFontParam);
-		moveBtnFont.setScale(1f, 2f);
+		moveBtnFont.getData().setScale(1f, 2f);
 
 		LabelStyle moveLableStyle = new LabelStyle(moveBtnFont, GameScreen.parseColor(moveBtnFontColor));
 		singleDigitPos = moveBtn.getX() + 50;
@@ -585,7 +585,7 @@ public class GameScreen implements Screen {
 		// DEBUG: fps logger
 		if (game.showFPS) {
 			debugFont = new BitmapFont();
-			debugFont.setScale(1.5f);
+			debugFont.getData().setScale(1.5f);
 			fpsLabel = new Label("FPS: ", new LabelStyle(debugFont, com.badlogic.gdx.graphics.Color.WHITE));
 			fpsLabel.setX(hudStage.getWidth()/2);
 			fpsLabel.setY(hudStage.getHeight() - 50);
@@ -599,16 +599,16 @@ public class GameScreen implements Screen {
 		dialogFontParam.size = (int)Math.ceil(45);
 		fontGenerator.scaleForPixelHeight((int)Math.ceil(45));
 		dialogButtonFont = fontGenerator.generateFont(dialogFontParam);
-		dialogButtonFont.setScale(.5f, 1.2f);
+		dialogButtonFont.getData().setScale(.5f, 1.2f);
 
 		dialogContentFont = fontGenerator.generateFont(dialogFontParam);
-		dialogContentFont.setScale(.5f, .9f);
+		dialogContentFont.getData().setScale(.5f, .9f);
 
 		dialogTitleFont = fontGenerator.generateFont(dialogFontParam);
-		dialogTitleFont.setScale(1.2f, 1.9f);
+		dialogTitleFont.getData().setScale(1.2f, 1.9f);
 
 		gameDialogTitleFont = fontGenerator.generateFont(dialogFontParam);
-		gameDialogTitleFont.setScale(1f, 1.7f);
+		gameDialogTitleFont.getData().setScale(1f, 1.7f);
 
 		fontGenerator.dispose();
 
